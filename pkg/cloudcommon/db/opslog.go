@@ -49,6 +49,7 @@ const (
 	ACT_START_CREATE_BACKUP  = "start_create_backup"
 	ACT_CREATE_BACKUP        = "create_backup"
 	ACT_CREATE_BACKUP_FAILED = "create_backup_failed"
+	ACT_DELETE_BACKUP        = "delete_backup"
 
 	ACT_UPDATE_STATUS       = "updatestatus"
 	ACT_STARTING            = "starting"

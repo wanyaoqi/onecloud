@@ -23,6 +23,7 @@ import (
 	"yunion.io/x/onecloud/pkg/cloudcommon/db"
 	"yunion.io/x/onecloud/pkg/cloudcommon/db/taskman"
 	"yunion.io/x/onecloud/pkg/compute/models"
+	"yunion.io/x/onecloud/pkg/util/logclient"
 )
 
 func init() {
@@ -101,6 +102,8 @@ func (self *GuestDeleteOnHostTask) OnUnDeployGuest(ctx context.Context, guest *m
 			self.OnFail(ctx, guest, err.Error())
 			return
 		}
+		logclient.AddActionLogWithContext(ctx, guest, logclient.ACT_DELETE_BACKUP, "", self.UserCred, true)
+		db.OpsLog.LogEvent(guest, db.ACT_DELETE_BACKUP, "", self.UserCred)
 	}
 	self.SetStage("OnSync", nil)
 	guest.StartSyncTask(ctx, self.UserCred, false, self.GetTaskId())
