@@ -304,7 +304,7 @@ func (self *SKVMGuestDriver) OnDeleteGuestFinalCleanup(ctx context.Context, gues
 
 func (self *SKVMGuestDriver) NeedStopForChangeSpec(guest *models.SGuest, cpuChanged, memChanged bool) bool {
 	return guest.GetMetadata("hotplug_cpu_mem", nil) != "enable" ||
-		(memChanged && guest.GetMetadata("__hugepage", nil) == "native")
+		(memChanged && guest.GetMetadata("__hugepage", nil) != "")
 }
 
 func (self *SKVMGuestDriver) RequestChangeVmConfig(ctx context.Context, guest *models.SGuest, task taskman.ITask, instanceType string, vcpuCount, vmemSize int64) error {
@@ -324,11 +324,24 @@ func (self *SKVMGuestDriver) RequestChangeVmConfig(ctx context.Context, guest *m
 		}
 		host := guest.GetHost()
 		url := fmt.Sprintf("%s/servers/%s/hotplug-cpu-mem", host.ManagerUri, guest.Id)
-		_, _, err := httputils.JSONRequest(httputils.GetDefaultClient(), ctx, "POST", url, header, body, false)
+		_, _, err := httputils.JSONRequest(
+			httputils.GetDefaultClient(), ctx, "POST", url, header, body, false)
 		return err
 	} else {
-		task.ScheduleRun(nil)
-		return nil
+		addMem := vmemSize - int64(guest.VmemSize)
+		if addMem > 0 && guest.GetMetadata("__hugepage", task.GetUserCred()) == "gpu" {
+			header := task.GetTaskRequestHeader()
+			body := jsonutils.NewDict()
+			body.Set("add_mem", jsonutils.NewInt(addMem))
+			host := guest.GetHost()
+			url := fmt.Sprintf("%s/servers/%s/hugepage-add-mem", host.ManagerUri, guest.Id)
+			_, _, err := httputils.JSONRequest(
+				httputils.GetDefaultClient(), ctx, "POST", url, header, body, false)
+			return err
+		} else {
+			task.ScheduleRun(nil)
+			return nil
+		}
 	}
 }
 

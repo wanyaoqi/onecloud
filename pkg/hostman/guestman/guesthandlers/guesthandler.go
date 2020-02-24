@@ -78,6 +78,7 @@ func AddGuestTaskHandler(prefix string, app *appsrv.Application) {
 			"hotplug-cpu-mem":      guestHotplugCpuMem,
 			"create-from-libvirt":  guestCreateFromLibvirt,
 			"cancel-block-jobs":    guestCancelBlockJobs,
+			"hugepage-add-mem":     guestHugepageAddMem,
 		} {
 			app.AddHandler("POST",
 				fmt.Sprintf("%s/%s/<sid>/%s", prefix, keyWord, action),
@@ -405,6 +406,19 @@ func guestCancelBlockJobs(ctx context.Context, sid string, body jsonutils.JSONOb
 		return nil, httperrors.NewNotFoundError("Guest %s not found", sid)
 	}
 	hostutils.DelayTaskWithoutReqctx(ctx, guestman.GetGuestManager().CancelBlockJobs, sid)
+	return nil, nil
+}
+
+func guestHugepageAddMem(ctx context.Context, sid string, body jsonutils.JSONObject) (interface{}, error) {
+	if !guestman.GetGuestManager().IsGuestExist(sid) {
+		return nil, httperrors.NewNotFoundError("Guest %s not found", sid)
+	}
+	addMem, err := body.Int("add_mem")
+	if err != nil {
+		return nil, httperrors.NewMissingParameterError("add_mem")
+	}
+	hostutils.DelayTask(ctx, guestman.GetGuestManager().HugepageAddMem,
+		&guestman.SGuestHugepageAddMem{sid, addMem})
 	return nil, nil
 }
 

@@ -43,6 +43,7 @@ import (
 	cgrouputils "yunion.io/x/onecloud/pkg/util/cgrouputils"
 	fileutils2 "yunion.io/x/onecloud/pkg/util/fileutils2"
 	netutils2 "yunion.io/x/onecloud/pkg/util/netutils2"
+	"yunion.io/x/onecloud/pkg/util/procutils"
 	timeutils2 "yunion.io/x/onecloud/pkg/util/timeutils2"
 )
 
@@ -785,6 +786,33 @@ func (m *SGuestManager) HotplugCpuMem(ctx context.Context, params interface{}) (
 	}
 	guest, _ := m.GetServer(hotplugParams.Sid)
 	NewGuestHotplugCpuMemTask(ctx, guest, int(hotplugParams.AddCpuCount), int(hotplugParams.AddMemSize)).Start()
+	return nil, nil
+}
+
+func (m *SGuestManager) HugepageAddMem(ctx context.Context, params interface{}) (jsonutils.JSONObject, error) {
+	hugepageParams, ok := params.(*SGuestHugepageAddMem)
+	if !ok {
+		return nil, hostutils.ParamsError
+	}
+	s, _ := m.GetServer(hugepageParams.Sid)
+	if hugepagePath := s.getHugepagePath(); fileutils2.Exists(hugepagePath) {
+		if procutils.NewCommand("mountpoint", hugepagePath).Run() == nil {
+			out, err := procutils.NewCommand("umount", hugepagePath).Output()
+			if err != nil {
+				log.Errorf("umount hugepage path failed %s", out)
+				return nil, err
+			}
+		}
+		err := procutils.NewCommand("rm", "-rf", hugepagePath).Run()
+		if err != nil {
+			return nil, err
+		}
+		mem, _ := s.Desc.Int("mem")
+		err = s.resizeHugepage(mem * -1)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return nil, nil
 }
 

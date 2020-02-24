@@ -22,8 +22,10 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"yunion.io/x/jsonutils"
 	"yunion.io/x/log"
 	"yunion.io/x/pkg/util/regutils"
@@ -55,12 +57,15 @@ const (
 	MAX_TRY                       = 3
 )
 
+var guestResizeHugepageLock = sync.Mutex{}
+
 type SKVMGuestInstance struct {
 	Id string
 
-	cgroupPid   int
-	QemuVersion string
-	VncPassword string
+	cgroupPid             int
+	QemuVersion           string
+	VncPassword           string
+	enabledHugepageForGPU bool
 
 	Desc        *jsonutils.JSONDict
 	Monitor     monitor.Monitor
@@ -229,10 +234,119 @@ func (s *SKVMGuestInstance) DirtyServerRequestStart() {
 	}
 }
 
+// mem size MB
+func (s *SKVMGuestInstance) resizeHugepage(mem int64) error {
+	guestResizeHugepageLock.Lock()
+	defer guestResizeHugepageLock.Unlock()
+	currentHugepageNr, err := s.getCurrentHugepageNr()
+	if err != nil {
+		return err
+	}
+	hugepageSize, err := s.manager.GetHost().GetHugepagesizeMb()
+	if err != nil {
+		return err
+	}
+	addHugepageNr := mem / hugepageSize
+	if addHugepageNr >= 0 {
+		addHugepageNr += 1
+	} else {
+		addHugepageNr -= 1
+	}
+	newHugepageNr := currentHugepageNr + addHugepageNr
+	if newHugepageNr < 0 {
+		return errors.New("can't set nr to nagative")
+	}
+	err = timeutils2.CommandWithTimeout(1, "sh", "-c",
+		fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", newHugepageNr)).Run()
+	if err == nil {
+		resetHugepagesNr := func() {
+			timeutils2.CommandWithTimeout(1, "sh", "-c",
+				fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", currentHugepageNr)).Run()
+		}
+		newestHugepageNr, err := s.getCurrentHugepageNr()
+		if err != nil {
+			resetHugepagesNr()
+			return err
+		}
+		if newestHugepageNr != newHugepageNr {
+			err = s.cleanSysCache()
+			if err != nil {
+				resetHugepagesNr()
+				return err
+			}
+			err = timeutils2.CommandWithTimeout(1, "sh", "-c",
+				fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", newHugepageNr)).Run()
+			if err != nil {
+				resetHugepagesNr()
+				return err
+			}
+			newestHugepageNr, err := s.getCurrentHugepageNr()
+			if err != nil {
+				resetHugepagesNr()
+				return err
+			}
+			if newestHugepageNr != newHugepageNr {
+				resetHugepagesNr()
+				return errors.New("resize hugepage failed, free memory not enough")
+			}
+		}
+		return nil
+	} else {
+		log.Errorf("Set new pagenum %d failed: %s", newHugepageNr, err)
+		return err
+	}
+}
+
+func (s *SKVMGuestInstance) cleanSysCache() error {
+	if err := procutils.NewCommand("sh", "-c",
+		"sync && echo 1 > /proc/sys/vm/drop_caches").Run(); err != nil {
+		return errors.Wrap(err, "clean cache")
+	}
+	return nil
+}
+
+func (s *SKVMGuestInstance) getCurrentHugepageNr() (int64, error) {
+	nrStr, err := fileutils2.FileGetContents("/proc/sys/vm/nr_hugepages")
+	if err != nil {
+		return 0, errors.Wrap(err, "file get content nr hugepages")
+	}
+	nr, err := strconv.Atoi(nrStr)
+	if err != nil {
+		return 0, errors.Wrap(err, "nr str atoi")
+	}
+	return int64(nr), nil
+}
+
+func (s *SKVMGuestInstance) hasGpu() bool {
+	isolatedParams, _ := s.Desc.GetArray("isolated_devices")
+	// return len(isolatedParams) > 0
+	return true
+}
+
+func (s *SKVMGuestInstance) getHugepagePath() string {
+	uuid, _ := s.Desc.GetString("uuid")
+	return fmt.Sprintf("/dev/hugepages/%s", uuid)
+}
+
 func (s *SKVMGuestInstance) asyncScriptStart(ctx context.Context, params interface{}) (jsonutils.JSONObject, error) {
 	data, ok := params.(*jsonutils.JSONDict)
 	if !ok {
 		return nil, hostutils.ParamsError
+	}
+
+	// resize hugepages nr for gpu device
+	if s.hasGpu() && options.HostOptions.HugepagesOption != "native" {
+		if !fileutils2.Exists(s.getHugepagePath()) {
+			mem, _ := s.Desc.Int("mem")
+			if err := s.resizeHugepage(mem); err == nil {
+				s.enabledHugepageForGPU = true
+				err = procutils.NewCommand("mkdir", "-p", s.getHugepagePath()).Run()
+				if err != nil {
+					s.resizeHugepage(mem * -1)
+					return nil, err
+				}
+			}
+		}
 	}
 
 	hostbridge.CleanDeletedPorts(options.HostOptions.BridgeDriver)
@@ -924,8 +1038,30 @@ func (s *SKVMGuestInstance) Delete(ctx context.Context, migrated bool) error {
 	if err := s.delTmpDisks(ctx, migrated); err != nil {
 		return err
 	}
+	if hugepagePath := s.getHugepagePath(); fileutils2.Exists(hugepagePath) {
+		out, err := procutils.NewCommand("umount", hugepagePath).Output()
+		if err != nil {
+			log.Errorf("umount hugepage path failed %s", out)
+		}
+		err = procutils.NewCommand("rm", "-rf", hugepagePath).Run()
+		if err != nil {
+			return err
+		}
+		if s.needReduceHugepageNr() {
+			mem, _ := s.Desc.Int("mem")
+			err := s.resizeHugepage(mem * -1)
+			if err != nil {
+				return errors.Wrap(err, "reduce hugepage size")
+			}
+		}
+	}
 	_, err := procutils.NewCommand("rm", "-rf", s.HomeDir()).Output()
 	return err
+}
+
+func (s *SKVMGuestInstance) needReduceHugepageNr() bool {
+	hugepage, _ := s.Desc.GetString("metadata", "__hugepage")
+	return hugepage == "gpu"
 }
 
 func (s *SKVMGuestInstance) Stop() bool {
@@ -1285,19 +1421,31 @@ func (s *SKVMGuestInstance) SetVncPassword() {
 
 func (s *SKVMGuestInstance) OnResumeSyncMetadataInfo() {
 	meta := jsonutils.NewDict()
+	if options.HostOptions.HugepagesOption == "native" {
+		meta.Set("__hugepage", jsonutils.NewString("native"))
+	} else if s.enabledHugepageForGPU {
+		meta.Set("__hugepage", jsonutils.NewString("gpu"))
+		s.updateLocalMetadata(meta)
+	}
 	meta.Set("__qemu_version", jsonutils.NewString(s.GetQemuVersionStr()))
 	meta.Set("__vnc_port", jsonutils.NewInt(int64(s.GetVncPort())))
 	meta.Set("hotplug_cpu_mem", jsonutils.NewString("enable"))
 	if len(s.VncPassword) > 0 {
 		meta.Set("__vnc_password", jsonutils.NewString(s.VncPassword))
 	}
-	if options.HostOptions.HugepagesOption == "native" {
-		meta.Set("__hugepage", jsonutils.NewString("native"))
-	}
 	if s.syncMeta != nil {
 		meta.Update(s.syncMeta)
 	}
 	s.SyncMetadata(meta)
+}
+
+func (s *SKVMGuestInstance) updateLocalMetadata(meta *jsonutils.JSONDict) error {
+	metadata, _ := s.Desc.GetMap("metadata")
+	updateMeta, _ := meta.GetMap()
+	for k, v := range updateMeta {
+		metadata[k] = v
+	}
+	return s.SaveDesc(s.Desc)
 }
 
 func (s *SKVMGuestInstance) CleanImportMetadata() *jsonutils.JSONDict {

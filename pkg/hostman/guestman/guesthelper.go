@@ -70,6 +70,11 @@ type SGuestHotplugCpuMem struct {
 	AddMemSize  int64
 }
 
+type SGuestHugepageAddMem struct {
+	Sid        string
+	AddMemSize int64
+}
+
 type SReloadDisk struct {
 	Sid  string
 	Disk storageman.IDisk

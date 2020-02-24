@@ -342,7 +342,7 @@ func (s *SKVMGuestInstance) _generateStartScript(data *jsonutils.JSONDict) (stri
 		cmd += fmt.Sprintf("%s %s\n", downscript, ifname)
 	}
 
-	if options.HostOptions.HugepagesOption == "native" {
+	if options.HostOptions.HugepagesOption == "native" || s.enabledHugepageForGPU {
 		cmd += fmt.Sprintf("mkdir -p /dev/hugepages/%s\n", uuid)
 		cmd += fmt.Sprintf("mount -t hugetlbfs -o size=%dM hugetlbfs-%s /dev/hugepages/%s\n",
 			mem, uuid, uuid)

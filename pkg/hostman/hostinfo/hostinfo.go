@@ -64,9 +64,10 @@ type SHostInfo struct {
 	saved  bool
 	pinger *SHostPingTask
 
-	Cpu     *SCPUInfo
-	Mem     *SMemory
-	sysinfo *SSysInfo
+	Cpu            *SCPUInfo
+	Mem            *SMemory
+	sysinfo        *SSysInfo
+	HugepageSizeMb int64
 
 	IsolatedDeviceMan *isolated_device.IsolatedDeviceManager
 
@@ -1452,6 +1453,17 @@ func (h *SHostInfo) getHostname() string {
 
 func (h *SHostInfo) GetCpuArchitecture() string {
 	return h.Cpu.CpuArchitecture
+}
+
+func (h *SHostInfo) GetHugepagesizeMb() (int64, error) {
+	if h.HugepageSizeMb > 0 {
+		return h.HugepageSizeMb, nil
+	}
+	h.HugepageSizeMb = int64(h.Mem.GetHugepagesizeMb())
+	if h.HugepageSizeMb == 0 {
+		return 0, errors.New("get hugepage size failed")
+	}
+	return h.HugepageSizeMb, nil
 }
 
 func NewHostInfo() (*SHostInfo, error) {
