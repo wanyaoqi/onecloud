@@ -257,11 +257,11 @@ func (s *SKVMGuestInstance) resizeHugepage(mem int64) error {
 		return errors.New("can't set nr to nagative")
 	}
 	err = timeutils2.CommandWithTimeout(1, "sh", "-c",
-		fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", newHugepageNr)).Run()
+		fmt.Sprintf("'echo %d > /proc/sys/vm/nr_hugepages'", newHugepageNr)).Run()
 	if err == nil {
 		resetHugepagesNr := func() {
 			timeutils2.CommandWithTimeout(1, "sh", "-c",
-				fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", currentHugepageNr)).Run()
+				fmt.Sprintf("'echo %d > /proc/sys/vm/nr_hugepages'", currentHugepageNr)).Run()
 		}
 		newestHugepageNr, err := s.getCurrentHugepageNr()
 		if err != nil {
@@ -275,7 +275,7 @@ func (s *SKVMGuestInstance) resizeHugepage(mem int64) error {
 				return err
 			}
 			err = timeutils2.CommandWithTimeout(1, "sh", "-c",
-				fmt.Sprintf("echo %d > /proc/sys/vm/nr_hugepages", newHugepageNr)).Run()
+				fmt.Sprintf("'echo %d > /proc/sys/vm/nr_hugepages'", newHugepageNr)).Run()
 			if err != nil {
 				resetHugepagesNr()
 				return err
@@ -299,7 +299,7 @@ func (s *SKVMGuestInstance) resizeHugepage(mem int64) error {
 
 func (s *SKVMGuestInstance) cleanSysCache() error {
 	if err := procutils.NewCommand("sh", "-c",
-		"sync && echo 1 > /proc/sys/vm/drop_caches").Run(); err != nil {
+		"'sync && echo 1 > /proc/sys/vm/drop_caches'").Run(); err != nil {
 		return errors.Wrap(err, "clean cache")
 	}
 	return nil
@@ -310,7 +310,7 @@ func (s *SKVMGuestInstance) getCurrentHugepageNr() (int64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "file get content nr hugepages")
 	}
-	nr, err := strconv.Atoi(nrStr)
+	nr, err := strconv.Atoi(strings.TrimSpace(nrStr))
 	if err != nil {
 		return 0, errors.Wrap(err, "nr str atoi")
 	}
@@ -318,7 +318,7 @@ func (s *SKVMGuestInstance) getCurrentHugepageNr() (int64, error) {
 }
 
 func (s *SKVMGuestInstance) hasGpu() bool {
-	isolatedParams, _ := s.Desc.GetArray("isolated_devices")
+	// isolatedParams, _ := s.Desc.GetArray("isolated_devices")
 	// return len(isolatedParams) > 0
 	return true
 }
@@ -334,17 +334,22 @@ func (s *SKVMGuestInstance) asyncScriptStart(ctx context.Context, params interfa
 		return nil, hostutils.ParamsError
 	}
 
+	log.Infof("Async Start ~!!!!!!!!!!!!!!!!!!!!!")
 	// resize hugepages nr for gpu device
 	if s.hasGpu() && options.HostOptions.HugepagesOption != "native" {
+		log.Infof("NEED hugepage !!!!!!!!!!")
 		if !fileutils2.Exists(s.getHugepagePath()) {
 			mem, _ := s.Desc.Int("mem")
 			if err := s.resizeHugepage(mem); err == nil {
+				log.Infof("reize hugepage success")
 				s.enabledHugepageForGPU = true
 				err = procutils.NewCommand("mkdir", "-p", s.getHugepagePath()).Run()
 				if err != nil {
 					s.resizeHugepage(mem * -1)
 					return nil, err
 				}
+			} else {
+				log.Errorf("resize hugepage for %s failed %s", s.GetName(), err)
 			}
 		}
 	}
