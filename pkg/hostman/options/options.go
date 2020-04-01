@@ -14,10 +14,13 @@
 
 package options
 
-import common_options "yunion.io/x/onecloud/pkg/cloudcommon/options"
+import (
+	common_options "yunion.io/x/onecloud/pkg/cloudcommon/options"
+)
 
 type SHostOptions struct {
 	common_options.CommonOptions
+	common_options.EtcdOptions
 
 	HostType        string   `help:"Host server type, either hypervisor or kubelet" default:"hypervisor"`
 	ListenInterface string   `help:"Master address of host server"`
@@ -114,6 +117,12 @@ type SHostOptions struct {
 	OvnSouthDatabase     string `help:"address for accessing ovn south database" default:"$HOST_OVN_SOUTH_DATABASE|unix:/var/run/openvswitch/ovnsb_db.sock"`
 	OvnIntegrationBridge string `help:"name of integration bridge for logical ports" default:"brvpc" default:"$HOST_OVN_INTEGRATION_BRIDGE|brvpc"`
 	OvnEncapIp           string `help:"encap ip for ovn datapath.  Default to output src address of default route" default:"$HOST_OVN_ENCAP_IP"`
+
+	EnableHealthChecker   bool   `help:"enable host health checker"`
+	HealthDriver          string `help:"Component save host health state" default:"etcd"`
+	HealthShutdownServers bool   `help:"Host healthor disconenct with controller shutdown shared storage servers" default:"false"`
+	HostHealthTimeout     int    `help:"host health timeout" default:"30"`
+	HostLeaseTimeout      int    `help:"lease timeout" default:"10"`
 }
 
 var HostOptions SHostOptions

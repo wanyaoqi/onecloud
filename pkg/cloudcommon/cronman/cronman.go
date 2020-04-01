@@ -304,25 +304,7 @@ func (self *SCronJobManager) Start2(ctx context.Context, electObj *elect.Elect) 
 		self.start(ctx)
 		return
 	}
-
-	go func() {
-		ch := make(chan elect.ElectEvent)
-		electObj.Subscribe(ch)
-		for {
-			select {
-			case ev := <-ch:
-				log.Infof("cronman: elect event %s: cronman", ev)
-				switch ev {
-				case elect.ElectEventWin:
-					self.start(ctx)
-				case elect.ElectEventLost:
-					self.Stop()
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	electObj.SubscribeWithAction(ctx, func(ctx2 context.Context) { self.start(ctx2) }, self.Stop)
 }
 
 func (self *SCronJobManager) Start() {
@@ -342,7 +324,7 @@ func (self *SCronJobManager) start(ctx context.Context) {
 	go self.run(ctx)
 }
 
-func (self *SCronJobManager) Stop() {
+func (self *SCronJobManager) Stop(ctx context.Context) {
 	self.stopFunc()
 }
 

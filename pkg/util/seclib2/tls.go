@@ -18,9 +18,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"io/ioutil"
 
 	"yunion.io/x/log"
+	"yunion.io/x/pkg/errors"
 )
 
 var CERT_SEP = []byte("-END CERTIFICATE-")
@@ -83,6 +85,52 @@ func InitTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 		RootCAs:      caCertPool,
 	}
 	// tlsConfig.ServerName = "CN=*"
+	tlsConfig.BuildNameToCertificate()
+	return tlsConfig, nil
+}
+
+func InitTLSConfigWithCA(certFile, keyFile, caCertFile string) (*tls.Config, error) {
+	allCertPEM, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		log.Errorf("read tls certfile fail %s", err)
+		return nil, err
+	}
+	certPEMs := splitCert(allCertPEM)
+	keyPEM, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		log.Errorf("read tls keyfile fail %s", err)
+		return nil, err
+	}
+	cert, err := tls.X509KeyPair(certPEMs[0], keyPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	for i := 1; i < len(certPEMs); i += 1 {
+		caCertPool.AppendCertsFromPEM(certPEMs[i])
+	}
+
+	data, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "read cacert file")
+	}
+	for {
+		var block *pem.Block
+		block, data = pem.Decode(data)
+		if block == nil {
+			break
+		}
+		cacert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse cacert file")
+		}
+		caCertPool.AddCert(cacert)
+	}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
 	tlsConfig.BuildNameToCertificate()
 	return tlsConfig, nil
 }
