@@ -1,6 +1,7 @@
 package host_health
 
 import (
+	"context"
 	"os"
 
 	"yunion.io/x/log"
@@ -9,7 +10,6 @@ import (
 	"yunion.io/x/onecloud/pkg/cloudcommon/etcd"
 	common_options "yunion.io/x/onecloud/pkg/cloudcommon/options"
 	"yunion.io/x/onecloud/pkg/cloudcommon/service"
-	"yunion.io/x/onecloud/pkg/hostman/options"
 	"yunion.io/x/onecloud/pkg/util/sysutils"
 )
 
@@ -39,8 +39,26 @@ func (s *SHostHealthService) InitService() {
 	}
 }
 
-func (host *SHostHealthService) OnExitService() {}
+func (s *SHostHealthService) OnExitService() {}
 
-func (host *SHostHealthService) RunService() {
-	app := app_common.InitApp(&options.HostOptions.BaseOptions, false)
+func (s *SHostHealthService) RunService() {
+	s.InitHostHealthMonitor()
+	app := app_common.InitApp(&HostHealthOptions.BaseOptions, false)
+	app_common.ServeForeverWithCleanup(app, &HostHealthOptions.BaseOptions, nil)
+}
+
+func (s *SHostHealthService) InitHostHealthMonitor() {
+	go s.initHostHealthMonitor()
+}
+
+func (s *SHostHealthService) initHostHealthMonitor() {
+	for {
+		cli := etcd.Default()
+		err := cli.PutSession(context.Background(), HostHealthOptions.HostId, "online")
+		if err != nil {
+			s.OnEtcdDisconnected()
+		} else {
+
+		}
+	}
 }

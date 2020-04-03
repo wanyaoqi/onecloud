@@ -12,7 +12,8 @@ type SHostHealthOptions struct {
 	ServersPath     string `help:"Path for virtual server configuration files" default:"/opt/cloud/workspace/servers"`
 	ShotdownServers bool   `help:"shotdown servers on disconenct with controller" default:"false"`
 
-	HostId string `help:"Id of current host"`
+	HostId              string   `help:"Id of current host"`
+	NeighbouringHostIps []string `help:"Ip of neighbouring hosts"`
 }
 
 var HostHealthOptions SHostHealthOptions
