@@ -19,6 +19,10 @@ import (
 	"time"
 
 	"yunion.io/x/log"
+	"yunion.io/x/onecloud/pkg/apis/identity"
+	"yunion.io/x/onecloud/pkg/httperrors"
+	"yunion.io/x/onecloud/pkg/mcclient/modules"
+	"yunion.io/x/pkg/errors"
 	"yunion.io/x/pkg/utils"
 
 	"yunion.io/x/onecloud/pkg/cloudcommon/consts"
@@ -89,4 +93,20 @@ func InitBaseAuth(options *common_options.BaseOptions) {
 		)
 	}
 	consts.SetNonDefaultDomainProjects(options.NonDefaultDomainProjects)
+}
+
+func FetchEtcdServiceInfo() (*identity.EndpointDetails, error) {
+	s := auth.GetAdminSession(context.Background(), "", "")
+	ret, err := modules.EndpointsV3.GetByName(s, identity.ENDPOINT_ETCD_INTERNAL, nil)
+	if err != nil && errors.Cause(err) == httperrors.ErrNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	endpoint := new(identity.EndpointDetails)
+	err = ret.Unmarshal(endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshal endpoint")
+	}
+	return endpoint, nil
 }

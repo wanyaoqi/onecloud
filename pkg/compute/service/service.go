@@ -20,6 +20,8 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"yunion.io/x/onecloud/pkg/cloudcommon/etcd"
+	"yunion.io/x/onecloud/pkg/util/seclib2"
 
 	"yunion.io/x/log"
 	"yunion.io/x/pkg/errors"
@@ -59,6 +61,26 @@ func StartService() {
 	app_common.InitAuth(commonOpts, func() {
 		log.Infof("Auth complete!!")
 	})
+
+	if opts.FetchEtcdServiceInfoAndUseEtcdLock {
+		etcdEndpoint, err := app_common.FetchEtcdServiceInfo()
+		if err != nil {
+			log.Fatalf("fetch etcd service info failed: %s", err)
+		}
+		if etcdEndpoint != nil {
+			opts.EtcdEndpoints = []string{etcdEndpoint.Url}
+			if len(etcdEndpoint.CertId) > 0 {
+				opts.EtcdUseTLS = true
+			}
+		}
+		if tlsCfg, err := seclib2.InitTLSConfigFromCertDatas(
+			etcdEndpoint.Certificate, etcdEndpoint.PrivateKey, etcdEndpoint.CaCertificate); err != nil {
+			log.Fatalf("init etcd tls config failed: %s", err)
+		} else {
+			etcd.InitDefaultEtcdClient()
+		}
+
+	}
 
 	app := app_common.InitApp(baseOpts, true)
 	InitHandlers(app)
