@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 
 	"yunion.io/x/log"
@@ -60,19 +59,11 @@ func splitCert(certBytes []byte) [][]byte {
 }
 
 func InitTLSConfigFromCertDatas(certPem, pkeyPem, caCertPem string) (*tls.Config, error) {
-	certPEMs := splitCert([]byte(cert))
-	if len(certPEMs) == 0 {
-		return nil, fmt.Errorf("bad input cert")
-	}
-	keyPEM := []byte(pkeyPem)
-	cert, err := tls.X509KeyPair(certPEMs[0], keyPEM)
+	cert, err := tls.X509KeyPair([]byte(certPem), []byte(pkeyPem))
 	if err != nil {
 		return nil, err
 	}
 	caCertPool := x509.NewCertPool()
-	for i := 1; i < len(certPEMs); i += 1 {
-		caCertPool.AppendCertsFromPEM(certPEMs[i])
-	}
 	caCertData := []byte(caCertPem)
 	for {
 		var block *pem.Block
@@ -90,7 +81,6 @@ func InitTLSConfigFromCertDatas(certPem, pkeyPem, caCertPem string) (*tls.Config
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caCertPool,
 	}
-	tlsConfig.BuildNameToCertificate()
 	return tlsConfig, nil
 }
 
@@ -118,7 +108,7 @@ func InitTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPoolpkg/apis/identity/endpoint.go,
+		RootCAs:      caCertPool,
 	}
 	// tlsConfig.ServerName = "CN=*"
 	tlsConfig.BuildNameToCertificate()

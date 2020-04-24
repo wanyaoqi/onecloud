@@ -42,10 +42,13 @@ type EtcdConfig struct {
 	opts *options.DBOptions
 }
 
-func NewEtcdConfigFromDBOptions(opts *options.DBOptions) (*EtcdConfig, error) {
-	tlsCfg, err := opts.GetEtcdTLSConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "etcd tls config")
+func NewEtcdConfigFromDBOptions(opts *options.DBOptions, tlsCfg *tls.Config) (*EtcdConfig, error) {
+	var err error
+	if tlsCfg == nil {
+		tlsCfg, err = opts.GetEtcdTLSConfig()
+		if err != nil {
+			return nil, errors.Wrap(err, "etcd tls config")
+		}
 	}
 
 	config := &EtcdConfig{

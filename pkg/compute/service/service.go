@@ -16,12 +16,14 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"yunion.io/x/onecloud/pkg/cloudcommon/etcd"
-	"yunion.io/x/onecloud/pkg/util/seclib2"
+	"yunion.io/x/pkg/util/signalutils"
 
 	"yunion.io/x/log"
 	"yunion.io/x/pkg/errors"
@@ -46,6 +48,17 @@ import (
 	_ "yunion.io/x/onecloud/pkg/multicloud/loader"
 )
 
+const (
+	CliCertFile = "etcd-client.crt"
+	CliKeyFile  = "etcd-client.key"
+	CliCAFile   = "etcd-client-ca.crt"
+)
+
+func writeFile(dir, file string, data []byte) (string, error) {
+	p := filepath.Join(dir, file)
+	return p, ioutil.WriteFile(p, data, 0600)
+}
+
 func StartService() {
 	opts := &options.Options
 	commonOpts := &options.Options.CommonOptions
@@ -61,25 +74,54 @@ func StartService() {
 	app_common.InitAuth(commonOpts, func() {
 		log.Infof("Auth complete!!")
 	})
+	signalutils.SetDumpStackSignal()
+	signalutils.StartTrap()
 
+	var etcdTlsCfg *tls.Config
 	if opts.FetchEtcdServiceInfoAndUseEtcdLock {
 		etcdEndpoint, err := app_common.FetchEtcdServiceInfo()
 		if err != nil {
 			log.Fatalf("fetch etcd service info failed: %s", err)
 		}
+		//etcdOptions := new(etcd.SEtcdOptions)
 		if etcdEndpoint != nil {
 			opts.EtcdEndpoints = []string{etcdEndpoint.Url}
 			if len(etcdEndpoint.CertId) > 0 {
 				opts.EtcdUseTLS = true
-			}
-		}
-		if tlsCfg, err := seclib2.InitTLSConfigFromCertDatas(
-			etcdEndpoint.Certificate, etcdEndpoint.PrivateKey, etcdEndpoint.CaCertificate); err != nil {
-			log.Fatalf("init etcd tls config failed: %s", err)
-		} else {
-			etcd.InitDefaultEtcdClient()
-		}
+				//etcdTlsCfg, err = seclib2.InitTLSConfigFromCertDatas(
+				//	etcdEndpoint.Certificate, etcdEndpoint.PrivateKey, etcdEndpoint.CaCertificate)
+				//if err != nil {
+				//	log.Fatalf("init etcd tls config failed: %s", err)
+				//}
+				//etcdOptions.TLSConfig = etcdTlsCfg
+				dir, err := ioutil.TempDir("", "etcd-cluster-tls")
+				if err != nil {
+					log.Fatalln(err)
+				}
 
+				certFile, err := writeFile(dir, CliCertFile, []byte(etcdEndpoint.Certificate))
+				if err != nil {
+					log.Fatalln(err)
+				}
+				opts.SslCertfile = certFile
+				keyFile, err := writeFile(dir, CliKeyFile, []byte(etcdEndpoint.PrivateKey))
+				if err != nil {
+					log.Fatalln(err)
+				}
+				opts.SslKeyfile = keyFile
+				caFile, err := writeFile(dir, CliCAFile, []byte(etcdEndpoint.CaCertificate))
+				if err != nil {
+					log.Fatalln(err)
+				}
+				opts.SslCaCerts = caFile
+			}
+			//err = etcd.InitDefaultEtcdClient(etcdOptions, nil)
+			//if err != nil {
+			//	log.Fatalf("init default etcd client failed: %s", err)
+			//}
+		}
+		// enable etcd lock
+		opts.LockmanMethod = common_options.LockMethodEtcd
 	}
 
 	app := app_common.InitApp(baseOpts, true)
@@ -106,7 +148,7 @@ func StartService() {
 	defer cancelFunc()
 
 	if opts.LockmanMethod == common_options.LockMethodEtcd {
-		etcdCfg, err := elect.NewEtcdConfigFromDBOptions(dbOpts)
+		etcdCfg, err := elect.NewEtcdConfigFromDBOptions(dbOpts, etcdTlsCfg)
 		if err != nil {
 			log.Fatalf("etcd config for elect: %v", err)
 		}

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"go.etcd.io/etcd/clientv3"
+	"google.golang.org/grpc"
 
 	"yunion.io/x/log"
 	"yunion.io/x/onecloud/pkg/util/seclib2"
@@ -82,11 +83,15 @@ func NewEtcdClient(opt *SEtcdOptions, onKeepaliveFailure func()) (*SEtcdClient, 
 	}
 
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   opt.EtcdEndpoint,
-		DialTimeout: time.Duration(timeoutSeconds) * time.Second,
-		Username:    opt.EtcdUsername,
-		Password:    opt.EtcdPassword,
-		TLS:         tlsConfig,
+		Endpoints: opt.EtcdEndpoint,
+		//DialTimeout: time.Duration(timeoutSeconds) * time.Second,
+		Username: opt.EtcdUsername,
+		Password: opt.EtcdPassword,
+		TLS:      tlsConfig,
+
+		DialOptions: []grpc.DialOption{
+			grpc.WithBlock(),
+		},
 	})
 	if err != nil {
 		return nil, err

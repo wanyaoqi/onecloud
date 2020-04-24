@@ -146,7 +146,7 @@ func (config *SEtcdLockManagerConfig) validate() error {
 		// let it fail right away
 		config.dialOptions = []grpc.DialOption{
 			grpc.WithBlock(),
-			grpc.WithTimeout(500 * time.Millisecond),
+			//grpc.WithTimeout(500 * time.Millisecond),
 		}
 	}
 	if config.LockTTL <= 0 {
