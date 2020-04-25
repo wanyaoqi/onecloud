@@ -23,10 +23,11 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"yunion.io/x/pkg/util/signalutils"
+	"go.etcd.io/etcd/pkg/transport"
 
 	"yunion.io/x/log"
 	"yunion.io/x/pkg/errors"
+	"yunion.io/x/pkg/util/signalutils"
 
 	api "yunion.io/x/onecloud/pkg/apis/compute"
 	"yunion.io/x/onecloud/pkg/cloudcommon"
@@ -83,9 +84,13 @@ func StartService() {
 		if err != nil {
 			log.Fatalf("fetch etcd service info failed: %s", err)
 		}
+		log.Errorf("etcdendpoint: \n%v", etcdEndpoint.Certificate)
+		log.Errorf("key: \n%v", etcdEndpoint.PrivateKey)
+		log.Errorf("ca: \n%v", etcdEndpoint.CaCertificate)
 		//etcdOptions := new(etcd.SEtcdOptions)
 		if etcdEndpoint != nil {
-			opts.EtcdEndpoints = []string{etcdEndpoint.Url}
+			//opts.EtcdEndpoints = []string{etcdEndpoint.Url}
+			opts.EtcdEndpoints = []string{"https://default-etcd-8jfc7ptwwh.default-etcd.onecloud.svc"}
 			if len(etcdEndpoint.CertId) > 0 {
 				opts.EtcdUseTLS = true
 				//etcdTlsCfg, err = seclib2.InitTLSConfigFromCertDatas(
@@ -94,7 +99,7 @@ func StartService() {
 				//	log.Fatalf("init etcd tls config failed: %s", err)
 				//}
 				//etcdOptions.TLSConfig = etcdTlsCfg
-				dir, err := ioutil.TempDir("", "etcd-cluster-tls")
+				dir, err := ioutil.TempDir("/tmp", "etcd-cluster-tls")
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -114,6 +119,20 @@ func StartService() {
 					log.Fatalln(err)
 				}
 				opts.SslCaCerts = caFile
+				tlsInfo := transport.TLSInfo{
+					CertFile:      certFile,
+					KeyFile:       keyFile,
+					TrustedCAFile: caFile,
+				}
+				tlsConfig, err := tlsInfo.ClientConfig()
+				if err != nil {
+					log.Fatalln(err)
+				}
+				//tlsConfig, err := seclib2.InitTLSConfigFromCertDatas(certFile, keyFile, caFile)
+				//if err != nil {
+				//	log.Fatalln(err)
+				//}
+				etcdTlsCfg = tlsConfig
 			}
 			//err = etcd.InitDefaultEtcdClient(etcdOptions, nil)
 			//if err != nil {
