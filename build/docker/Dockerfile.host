@@ -4,6 +4,10 @@ MAINTAINER "Yaoqi Wan wanyaoqi@yunionyun.com"
 
 ENV TZ Asia/Shanghai
 
-RUN apk add librados librbd
 RUN mkdir -p /opt/yunion/bin
-ADD ./_output/alpine-build/bin/host /opt/yunion/bin/host
+ADD ./_output/bin/host /opt/yunion/bin/host
+ADD ./_output/bin/.host.bin /opt/yunion/bin/.host.bin
+ADD ./_output/bin/bundles/host /opt/yunion/bin/bundles/host
+ADD ./_output/bin/rbd/librados.so.2 /opt/yunion/bin/bundles/host/lib/librados.so.2
+ADD ./_output/bin/rbd/librbd.so.1 /opt/yunion/bin/bundles/host/lib/librbd.so.1
+ADD ./_output/bin/rbd/libceph-common.so.0 /opt/yunion/bin/bundles/host/lib/libceph-common.so.0
