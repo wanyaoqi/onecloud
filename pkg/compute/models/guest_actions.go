@@ -82,6 +82,27 @@ func (self *SGuest) GetDetailsVnc(ctx context.Context, userCred mcclient.TokenCr
 	}
 }
 
+func (self *SGuest) PreCheckPerformAction(
+	ctx context.Context, userCred mcclient.TokenCredential,
+	action string, query jsonutils.JSONObject, data jsonutils.JSONObject,
+) error {
+	if self.Hypervisor == api.HYPERVISOR_KVM {
+		host := self.GetHost()
+		if (host.HostStatus == api.HOST_OFFLINE || !host.Enabled.Bool()) &&
+			utils.IsInStringArray(action,
+				[]string{
+					"start", "restart", "stop", "reset", "rebuild-root",
+					"change-config", "instance-snapshot", "snapshot-and-clone",
+					"attach-isolated-device", "detach-isolated-deivce",
+					"insert-iso", "eject-iso", "deploy", "create-backup",
+				}) {
+			return httperrors.NewInvalidStatusError(
+				"host status %s, is enabled %v, can't do %s", host.HostStatus, host.Enabled.Bool(), action)
+		}
+	}
+	return nil
+}
+
 func (self *SGuest) AllowPerformMonitor(ctx context.Context,
 	userCred mcclient.TokenCredential,
 	query jsonutils.JSONObject,
