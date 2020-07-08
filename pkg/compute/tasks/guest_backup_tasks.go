@@ -111,9 +111,25 @@ func (self *GuestSwitchToBackupTask) OnComplete(ctx context.Context, guest *mode
 }
 
 func (self *GuestSwitchToBackupTask) OnSwitched(ctx context.Context, guest *models.SGuest, data jsonutils.JSONObject) {
-	guest.SetMetadata(ctx, "__mirror_job_status", "", self.UserCred)
+	if err := guest.SetMetadata(ctx, "__mirror_job_status", "", self.UserCred); err != nil {
+		self.OnSwitchedFailed(ctx, guest, jsonutils.NewString("guest set metadata failed"))
+		return
+	}
+	// add a new bacup server
+	self.SetStage("OnCreatedBackup", nil)
+	if jsonutils.QueryBoolean(self.Params, "purge_backup", false) ||
+		jsonutils.QueryBoolean(self.Params, "delete_backup", false) {
+		if _, err := guest.StartGuestCreateBackupTask(ctx, self.UserCred, self.Id, jsonutils.NewDict()); err != nil {
+			self.OnSwitchedFailed(ctx, guest, jsonutils.NewString(fmt.Sprintf("guest start create backup failed %s", err)))
+		}
+	} else {
+		self.OnCreatedBackup(ctx, guest, nil)
+	}
+}
+
+func (self *GuestSwitchToBackupTask) OnCreatedBackup(ctx context.Context, guest *models.SGuest, data jsonutils.JSONObject) {
 	oldStatus, _ := self.Params.GetString("old_status")
-	if utils.IsInStringArray(oldStatus, api.VM_RUNNING_STATUS) {
+	if !utils.IsInStringArray(guest.Status, api.VM_RUNNING_STATUS) && utils.IsInStringArray(oldStatus, api.VM_RUNNING_STATUS) {
 		self.SetStage("OnNewMasterStarted", nil)
 		guest.StartGueststartTask(ctx, self.UserCred, nil, self.GetTaskId())
 	} else {

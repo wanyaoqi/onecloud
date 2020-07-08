@@ -289,8 +289,13 @@ type ServerConfigs struct {
 
 	// 虚拟机高可用(创建备机)
 	// default: false
-	// requried: false
+	// required: false
 	Backup bool `json:"backup"`
+
+	// 自动切换主备机
+	// default: false
+	// required:
+	AutoSwitchOnHostDown bool `json:"auto_switch_on_host_down"`
 
 	// 创建虚拟机数量
 	// default: 1

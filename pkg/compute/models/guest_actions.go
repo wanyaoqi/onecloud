@@ -3353,7 +3353,12 @@ func (self *SGuest) PerformCreateBackup(ctx context.Context, userCred mcclient.T
 	if hasSnapshot {
 		return nil, httperrors.NewBadRequestError("Cannot create backup with snapshot")
 	}
+	return self.StartGuestCreateBackupTask(ctx, userCred, "", data)
+}
 
+func (self *SGuest) StartGuestCreateBackupTask(
+	ctx context.Context, userCred mcclient.TokenCredential, parentTaskId string, data jsonutils.JSONObject,
+) (jsonutils.JSONObject, error) {
 	req := self.getGuestBackupResourceRequirements(ctx, userCred)
 	keys, err := self.GetQuotaKeys()
 	if err != nil {

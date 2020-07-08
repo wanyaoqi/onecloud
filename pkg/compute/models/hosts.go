@@ -1401,6 +1401,17 @@ func (self *SHost) GetGuests() []SGuest {
 	return guests
 }
 
+func (self *SHost) GetGuestsWithBackup() []SGuest {
+	q := self.GetGuestsQuery().IsNotEmpty("backup_host_id")
+	guests := make([]SGuest, 0)
+	err := db.FetchModelObjects(GuestManager, q, &guests)
+	if err != nil {
+		log.Errorf("GetGuests %s", err)
+		return nil
+	}
+	return guests
+}
+
 func (self *SHost) GetGuestCount() (int, error) {
 	q := self.GetGuestsQuery()
 	return q.CountWithError()
@@ -4882,6 +4893,8 @@ func (host *SHost) PerformHostMaintenance(ctx context.Context, userCred mcclient
 func (host *SHost) OnHostDown(ctx context.Context, userCred mcclient.TokenCredential) {
 	log.Errorf("watched host down %s", host.Id)
 	db.OpsLog.LogEvent(host, db.ACT_HOST_DOWN, "", userCred)
+
+	host.SwitchServersToBackup(ctx, userCred)
 	if host.GetMetadata("__auto_migrate_on_host_down", nil) == "enable" {
 		if err := host.MigrateSharedStorageServers(ctx, userCred); err != nil {
 			db.OpsLog.LogEvent(host, db.ACT_HOST_DOWN, fmt.Sprintf("migrate servers failed %s", err), userCred)
@@ -4892,6 +4905,28 @@ func (host *SHost) OnHostDown(ctx context.Context, userCred mcclient.TokenCreden
 		return nil
 	}); err != nil {
 		log.Errorf("update host %s failed %s", host.Id, err)
+	}
+}
+
+func (host *SHost) SwitchServersToBackup(ctx context.Context, userCred mcclient.TokenCredential) {
+	guests := host.GetGuestsWithBackup()
+	for i := 0; i < len(guests); i++ {
+		if guests[i].AutoSwitchOnHostDown {
+			data := jsonutils.NewDict()
+			data.Set("purge_backup", jsonutils.JSONTrue)
+			_, err := guests[i].PerformSwitchToBackup(ctx, userCred, nil, data)
+			if err != nil {
+				db.OpsLog.LogEvent(
+					&guests[i], db.ACT_SWITCH_FAILED,
+					fmt.Sprintf("PerformSwitchToBackup on host down: %s", err), userCred,
+				)
+				logclient.AddSimpleActionLog(
+					&guests[i], logclient.ACT_SWITCH_TO_BACKUP,
+					fmt.Sprintf("PerformSwitchToBackup on host down: %s", err),
+					userCred, false,
+				)
+			}
+		}
 	}
 }
 
