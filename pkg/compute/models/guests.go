@@ -124,7 +124,7 @@ type SGuest struct {
 
 	// 备份机所在宿主机Id
 	BackupHostId         string `width:"36" charset:"ascii" nullable:"true" list:"user" get:"user"`
-	AutoSwitchOnHostDown bool   `nullable:"false" default:"false" list:"user" create:"optional"`
+	AutoSwitchOnHostDown bool   `nullable:"false" default:"true" list:"user" create:"optional"`
 
 	Vga     string `width:"36" charset:"ascii" nullable:"true" list:"user" update:"user" create:"optional"`
 	Vdi     string `width:"36" charset:"ascii" nullable:"true" list:"user" update:"user" create:"optional"`
