@@ -40,6 +40,7 @@ build_bin() {
 			docker run --rm \
 				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
 				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
+				-v /tmp:/tmp \
 				registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 \
 				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1 cmd/*cli; chown -R $(id -u):$(id -g) _output"
 			;;
@@ -47,6 +48,7 @@ build_bin() {
 			docker run --rm \
 				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
 				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
+				-v /tmp:/tmp \
 				registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 \
 				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1; chown -R $(id -u):$(id -g) _output"
 			;;
