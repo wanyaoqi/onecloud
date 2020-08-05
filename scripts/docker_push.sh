@@ -67,7 +67,7 @@ build_image() {
     local tag=$1
     local file=$2
     local path=$3
-    DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --network host --push --platform linux/arm64 -t "$tag" -f "$2" "$3"
+    docker build -t "$tag" -f "$2" "$3"
 }
 
 push_image() {
