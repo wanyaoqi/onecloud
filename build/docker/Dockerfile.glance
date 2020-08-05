@@ -3,4 +3,4 @@ FROM registry.cn-beijing.aliyuncs.com/yunionio/torrent:latest
 MAINTAINER "Zexi Li <lizexi@yunionyun.com>"
 
 RUN mkdir -p /opt/yunion/bin
-ADD ./_output/bin/glance /opt/yunion/bin/glance
+ADD ./_output/alpine-build/bin/glance /opt/yunion/bin/glance

@@ -2,4 +2,4 @@ FROM registry.cn-beijing.aliyuncs.com/d3lx/climc-base:20200805
 
 ADD ./build/climc/root/opt /opt
 
-ADD ./_output/bin/climc ./_output/bin/*cli /opt/yunion/bin/
+ADD ./_output/alpine-build/bin/climc ./_output/alpine-build/bin/*cli /opt/yunion/bin/climc

@@ -13,4 +13,4 @@ ENV TZ Asia/Shanghai
 # add executable file torrent
 # make cmd/torrent
 RUN mkdir -p /opt/yunion/bin
-ADD ./_output/bin/torrent /opt/yunion/bin/torrent
+ADD ./_output/alpine-build/bin/torrent /opt/yunion/bin/torrent
