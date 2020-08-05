@@ -32,31 +32,30 @@ DOCKER_DIR="$SRC_DIR/build/docker"
 
 REGISTRY=${REGISTRY:-docker.io/yunion}
 TAG=${TAG:-latest}
+GOARCH=${GOARCH:-amd64}
 
 build_bin() {
 	case "$1" in
 		climc)
-			GOOS=linux make cmd/$1 cmd/*cli
-			;;
-		ansibleserver|\
-		host|\
-		region-dns|\
-		vpcagent)
 			docker run --rm \
 				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
 				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
 				registry.cn-beijing.aliyuncs.com/yunionio/alpine-build:1.0-1 \
-				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; make cmd/$1; chown -R $(id -u):$(id -g) _output"
+				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1 cmd/*cli; chown -R $(id -u):$(id -g) _output"
 			;;
 		*)
-			GOOS=linux make cmd/$1
+			docker run --rm \
+				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
+				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
+				registry.cn-beijing.aliyuncs.com/yunionio/alpine-build:1.0-1 \
+				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1; chown -R $(id -u):$(id -g) _output"
 			;;
 	esac
 }
 
 
 build_bundle_libraries() {
-    for bundle_component in 'host-deployer' 'baremetal-agent'; do
+    for bundle_component in 'baremetal-agent'; do
         if [ $1 == $bundle_component ]; then
             $CUR_DIR/bundle_libraries.sh _output/bin/bundles/$1 _output/bin/$1
             break
@@ -68,7 +67,7 @@ build_image() {
     local tag=$1
     local file=$2
     local path=$3
-    docker build -t "$tag" -f "$2" "$3"
+    DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build --network host --push --platform linux/arm64 -t "$tag" -f "$2" "$3"
 }
 
 push_image() {
@@ -101,5 +100,5 @@ for component in $COMPONENTS; do
     build_bundle_libraries $component
     img_name="$REGISTRY/$component:$TAG"
     build_image $img_name $DOCKER_DIR/Dockerfile.$component $SRC_DIR
-    push_image "$img_name"
+    # push_image "$img_name"
 done
