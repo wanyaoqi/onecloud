@@ -102,5 +102,5 @@ for component in $COMPONENTS; do
     build_bundle_libraries $component
     img_name="$REGISTRY/$component:$TAG"
     build_image $img_name $DOCKER_DIR/Dockerfile.$component $SRC_DIR
-    # push_image "$img_name"
+    push_image "$img_name"
 done
