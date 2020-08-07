@@ -1,22 +1,15 @@
-FROM --platform=linux/arm64 registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 as build-arm
+FROM --platform=linux/arm64 registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 as build
+ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 RUN mkdir -p /root/go/src/yunion.io/x/onecloud
 COPY . /root/go/src/yunion.io/x/onecloud
-RUN ls /root/go/src/yunion.io/x/onecloud
+RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
 
 WORKDIR /root/go/src/yunion.io/x/onecloud
-RUN GOARCH=`echo $BUILDPLATFORM | cut -d / -f 2` GOOS=linux make cmd/region
-
-FROM --platform=linux/amd64 registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 as build
-ARG BUILDPLATFORM
-RUN mkdir -p /root/go/src/yunion.io/x/onecloud
-COPY . /root/go/src/yunion.io/x/onecloud
-RUN ls /root/go/src/yunion.io/x/onecloud
-
-WORKDIR /root/go/src/yunion.io/x/onecloud
-RUN GOARCH=`echo $BUILDPLATFORM | cut -d / -f 2` GOOS=linux make cmd/region
+RUN go env
+RUN make cmd/region
 
 FROM registry.cn-beijing.aliyuncs.com/d3lx/onecloud-base:v0.1
-
+RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
 COPY --from=build /root/go/src/yunion.io/x/onecloud/build/region/root/opt/ /opt/
 COPY --from=build /root/go/src/yunion.io/x/onecloud/_output/bin/region /opt/yunion/bin/region

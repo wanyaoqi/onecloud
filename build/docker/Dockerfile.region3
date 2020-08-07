@@ -1,0 +1,9 @@
+FROM registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 as build-arm
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM" > /log
+FROM registry.cn-beijing.aliyuncs.com/d3lx/onecloud-base:v0.1
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+RUN echo "XXXXXXX I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
+COPY --from=build-arm /log /log

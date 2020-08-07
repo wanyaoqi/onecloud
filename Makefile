@@ -58,6 +58,13 @@ export CGO_LDFLAGS = ${X_CGO_LDFLAGS}
 
 UNAME := $(shell uname)
 
+ifdef GOARCH
+	TARGET := $(shell basename $1).$(GOARCH)
+else
+	TARGET := $(shell basename $@)
+endif
+
+
 ifeq ($(UNAME), Linux)
 XARGS_FLAGS = --no-run-if-empty
 endif
@@ -85,10 +92,20 @@ vet:
 	go vet ./...
 
 cmd/esxi-agent: prepare_dir
-	CGO_ENABLED=0 $(GO_BUILD) -o $(BIN_DIR)/$(shell basename $@) $(REPO_PREFIX)/$@
+	if [ -n $(GOARCH) ]; then
+		TARGET=$(shell basename $@).$(GOARCH)
+	else
+		TARGET=$(shell basename $@)
+	fi
+	CGO_ENABLED=0 $(GO_BUILD) -o $(BIN_DIR)/$(TARGET) $(REPO_PREFIX)/$@
 
 cmd/%: prepare_dir
-	$(GO_BUILD) -o $(BIN_DIR)/$(shell basename $@) $(REPO_PREFIX)/$@
+	if [ -n $(GOARCH) ]; then
+		TARGET=$(shell basename $@).$(GOARCH)
+	else
+		TARGET=$(shell basename $@)
+	fi
+	$(GO_BUILD) -o $(BIN_DIR)/$(TARGET) $(REPO_PREFIX)/$@
 
 rpm/%: cmd/%
 	$(BUILD_SCRIPT) $*

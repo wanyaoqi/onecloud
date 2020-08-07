@@ -32,25 +32,25 @@ DOCKER_DIR="$SRC_DIR/build/docker"
 
 REGISTRY=${REGISTRY:-docker.io/yunion}
 TAG=${TAG:-latest}
-GOARCH=${GOARCH:-amd64}
 
 build_bin() {
+	if [ -n $2 ]; then
+		TARGET_ARCH="GOARCH=$2"
+	fi
 	case "$1" in
 		climc)
 			docker run --rm \
 				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
 				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
-				-v /tmp:/tmp \
 				registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 \
-				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1 cmd/*cli; chown -R $(id -u):$(id -g) _output"
+				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; $TARGET_ARCH GOOS=linux make cmd/$1 cmd/*cli; chown -R $(id -u):$(id -g) _output"
 			;;
 		*)
 			docker run --rm \
 				-v $SRC_DIR:/root/go/src/yunion.io/x/onecloud \
 				-v $SRC_DIR/_output/alpine-build:/root/go/src/yunion.io/x/onecloud/_output \
-				-v /tmp:/tmp \
 				registry.cn-beijing.aliyuncs.com/d3lx/alpine-build:1.0-1 \
-				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; GOARCH=$GOARCH GOOS=linux make cmd/$1; chown -R $(id -u):$(id -g) _output"
+				/bin/sh -c "set -ex; cd /root/go/src/yunion.io/x/onecloud; $TARGET_ARCH GOOS=linux make cmd/$1; chown -R $(id -u):$(id -g) _output"
 			;;
 	esac
 }
@@ -98,7 +98,26 @@ for component in $COMPONENTS; do
         continue
     fi
     echo "Start to build component: $component"
-    build_bin $component
+    case "$ARCH" in
+      all)
+        for arch in "arm64" "amd64"; do
+          build_bin $component $arch
+        done
+        ;;
+      arm64)
+          build_bin $component "arm64"
+        ;;
+      amd64)
+          build_bin $component "amd64"
+        ;;
+      *)
+          build_bin $component
+        ;;
+    esac
+    if [[ $ARCH == "all" ]]; then
+        for arch in 
+        build_bin $component
+    fi
     build_bundle_libraries $component
     img_name="$REGISTRY/$component:$TAG"
     build_image $img_name $DOCKER_DIR/Dockerfile.$component $SRC_DIR
