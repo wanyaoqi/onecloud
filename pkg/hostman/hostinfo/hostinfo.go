@@ -150,7 +150,7 @@ func (h *SHostInfo) Init() error {
 	if err := h.detectHostInfo(); err != nil {
 		return err
 	}
-	return nil
+
 	if err := h.prepareEnv(); err != nil {
 		return err
 	}
@@ -163,6 +163,7 @@ func (h *SHostInfo) Init() error {
 			return err
 		}
 	}
+	return nil
 }
 
 func (h *SHostInfo) setupOvnChassis() error {
