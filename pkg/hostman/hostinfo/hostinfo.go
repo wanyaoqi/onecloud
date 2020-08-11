@@ -146,6 +146,11 @@ func (h *SHostInfo) IsHugepagesEnabled() bool {
 }
 
 func (h *SHostInfo) Init() error {
+	log.Infof("Start detectHostInfo")
+	if err := h.detectHostInfo(); err != nil {
+		return err
+	}
+	return nil
 	if err := h.prepareEnv(); err != nil {
 		return err
 	}
@@ -158,12 +163,6 @@ func (h *SHostInfo) Init() error {
 			return err
 		}
 	}
-
-	log.Infof("Start detectHostInfo")
-	if err := h.detectHostInfo(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (h *SHostInfo) setupOvnChassis() error {
