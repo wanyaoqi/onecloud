@@ -70,8 +70,6 @@ func (host *SHostService) InitService() {
 		execlient.Init(options.HostOptions.ExecutorSocketPath)
 		procutils.SetRemoteExecutor()
 	}
-
-	system_service.Init()
 }
 
 func (host *SHostService) OnExitService() {}
@@ -86,6 +84,8 @@ func (host *SHostService) RunService() {
 		log.Fatalf(err.Error())
 	}
 
+	// after host init
+	system_service.Init()
 	deployclient.Init(options.HostOptions.DeployServerSocketPath)
 	if err := storageman.Init(hostInstance); err != nil {
 		log.Fatalf(err.Error())

@@ -603,6 +603,24 @@ func (h *SHostInfo) detectOsDist() {
 	log.Infof("DetectOsDist %s %s", h.sysinfo.OsDistribution, h.sysinfo.OsVersion)
 	if len(h.sysinfo.OsDistribution) == 0 {
 		log.Errorln("Failed to detect distribution info")
+		content, err := procutils.NewRemoteCommandAsFarAsPossible("cat", "/etc/os-release").Output()
+		if err != nil {
+			log.Errorln(err)
+		}
+		for _, line := range strings.Split(string(content), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "ID=") {
+				h.sysinfo.OsDistribution = line[3:]
+				continue
+			}
+			if strings.HasPrefix(line, "VERSION=") {
+				h.sysinfo.OsVersion = strings.Trim(line[8:], "\"")
+				continue
+			}
+		}
+	}
+	if utils.IsInStringArray(h.sysinfo.OsDistribution, []string{"uos", "debian", "ubuntu"}) {
+		system_service.SetOpenvswitchName("openvswitch-switch")
 	}
 }
 
