@@ -334,8 +334,10 @@ func (h *SHostInfo) prepareEnv() error {
 	if err != nil {
 		log.Errorf("modprobe error: %s", output)
 	}
-	if !cgrouputils.Init() {
-		return fmt.Errorf("Cannot initialize control group subsystem")
+	if !options.HostOptions.DisableSetCgroup {
+		if !cgrouputils.Init() {
+			return fmt.Errorf("Cannot initialize control group subsystem")
+		}
 	}
 
 	if err := hostbridge.Prepare(options.HostOptions.BridgeDriver); err != nil {
