@@ -114,10 +114,6 @@ for component in $COMPONENTS; do
           build_bin $component
         ;;
     esac
-    if [[ $ARCH == "all" ]]; then
-        for arch in 
-        build_bin $component
-    fi
     build_bundle_libraries $component
     img_name="$REGISTRY/$component:$TAG"
     build_image $img_name $DOCKER_DIR/Dockerfile.$component $SRC_DIR
