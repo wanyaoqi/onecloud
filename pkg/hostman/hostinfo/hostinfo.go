@@ -146,11 +146,6 @@ func (h *SHostInfo) IsHugepagesEnabled() bool {
 }
 
 func (h *SHostInfo) Init() error {
-	log.Infof("Start detectHostInfo")
-	if err := h.detectHostInfo(); err != nil {
-		return err
-	}
-
 	if err := h.prepareEnv(); err != nil {
 		return err
 	}
@@ -163,6 +158,16 @@ func (h *SHostInfo) Init() error {
 			return err
 		}
 	}
+
+	log.Infof("Start detectHostInfo")
+	if err := h.detectHostInfo(); err != nil {
+		return err
+	}
+	if err := hostbridge.Prepare(options.HostOptions.BridgeDriver); err != nil {
+		log.Errorln(err)
+		return err
+	}
+
 	return nil
 }
 
@@ -338,11 +343,6 @@ func (h *SHostInfo) prepareEnv() error {
 		if !cgrouputils.Init() {
 			return fmt.Errorf("Cannot initialize control group subsystem")
 		}
-	}
-
-	if err := hostbridge.Prepare(options.HostOptions.BridgeDriver); err != nil {
-		log.Errorln(err)
-		return err
 	}
 
 	// err = h.resetIptables()
