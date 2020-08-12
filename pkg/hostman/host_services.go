@@ -40,7 +40,6 @@ import (
 	"yunion.io/x/onecloud/pkg/hostman/storageman"
 	"yunion.io/x/onecloud/pkg/hostman/storageman/diskhandlers"
 	"yunion.io/x/onecloud/pkg/hostman/storageman/storagehandler"
-	"yunion.io/x/onecloud/pkg/hostman/system_service"
 	"yunion.io/x/onecloud/pkg/httperrors"
 	"yunion.io/x/onecloud/pkg/util/procutils"
 	"yunion.io/x/onecloud/pkg/util/sysutils"
@@ -84,8 +83,6 @@ func (host *SHostService) RunService() {
 		log.Fatalf(err.Error())
 	}
 
-	// after host init
-	system_service.Init()
 	deployclient.Init(options.HostOptions.DeployServerSocketPath)
 	if err := storageman.Init(hostInstance); err != nil {
 		log.Fatalf(err.Error())

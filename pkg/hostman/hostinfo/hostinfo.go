@@ -399,6 +399,7 @@ func (h *SHostInfo) detectHostInfo() error {
 
 	h.detectStorageSystem()
 
+	system_service.Init()
 	if options.HostOptions.CheckSystemServices {
 		if err := h.checkSystemServices(); err != nil {
 			return err
