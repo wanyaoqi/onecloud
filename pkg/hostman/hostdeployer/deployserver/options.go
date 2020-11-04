@@ -23,7 +23,8 @@ type SDeployOptions struct {
 	PrivatePrefixes        []string `help:"IPv4 private prefixes"`
 	ChntpwPath             string   `help:"path to chntpw tool" default:"/usr/local/bin/chntpw.static"`
 	EnableRemoteExecutor   bool     `help:"Enable remote executor" default:"false"`
-	ExecSocketPath         string   `help:"Exec socket paht" default:"/var/run/exec.sock"`
+	ExecSocketPath         string   `help:"Exec socket path" default:"/var/run/exec.sock"`
+	ImageDeployDriver      string   `help:"Image deploy driver" default:"nbd" choices:"nbd|libguestfs"`
 }
 
 var DeployOption SDeployOptions

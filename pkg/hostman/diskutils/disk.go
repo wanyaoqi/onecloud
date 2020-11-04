@@ -27,7 +27,7 @@ type IDisk interface {
 	UmountRootfs(driver fsdriver.IRootFsDriver)
 }
 
-func GetIDisk(params *apis.DeployParams) IDisk {
+func GetIDisk(params *apis.DeployParams, driver string) IDisk {
 	hypervisor := params.GuestDesc.Hypervisor
 	switch hypervisor {
 	case comapi.HYPERVISOR_KVM:

@@ -66,7 +66,7 @@ func (*DeployerServer) DeployGuestFs(ctx context.Context, req *deployapi.DeployP
 		}
 	}()
 	log.Infof("********* Deploy guest fs on %s", req.DiskPath)
-	var disk = diskutils.GetIDisk(req)
+	var disk = diskutils.GetIDisk(req, DeployOption.ImageDeployDriver)
 	if len(req.GuestDesc.Hypervisor) == 0 {
 		req.GuestDesc.Hypervisor = comapi.HYPERVISOR_KVM
 	}
