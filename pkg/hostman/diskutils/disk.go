@@ -38,3 +38,16 @@ func GetIDisk(params *apis.DeployParams, driver string) IDisk {
 		return NewKVMGuestDisk(params.DiskPath)
 	}
 }
+
+type IDeployer interface {
+	ConnectionPrecheck() string
+	OnConnected(pathType string) error
+	Connect() error
+	Disconnect() error
+
+	IsLVMPartition() bool
+	Zerofree()
+	ResizePartition() error
+	FormatPartition(fs, uuid string) error
+	MakePartition(fs string) error
+}

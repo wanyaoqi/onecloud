@@ -115,7 +115,7 @@ func init() {
 		Desc     string `help:"Description"`
 		Enabled  bool   `help:"Set the domain enabled"`
 		Disabled bool   `help:"Set the domain disabled"`
-		Driver   string `help:"Set the domain Driver"`
+		Driver   string `help:"Set the domain deployer"`
 
 		Displayname string `help:"display name"`
 	}

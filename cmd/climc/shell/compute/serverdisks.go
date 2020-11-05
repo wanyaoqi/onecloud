@@ -77,7 +77,7 @@ func init() {
 	type ServerDiskUpdateOptions struct {
 		SERVER string `help:"ID or Name of server"`
 		DISK   string `help:"ID or Name of Disk"`
-		Driver string `help:"Driver of vDisk" choices:"virtio|ide|scsi|pvscsi"`
+		Driver string `help:"deployer of vDisk" choices:"virtio|ide|scsi|pvscsi"`
 		Cache  string `help:"Cache mode of vDisk" choices:"writethrough|none|writeback"`
 		Aio    string `help:"Asynchronous IO mode of vDisk" choices:"native|threads"`
 		Index  int64  `help:"Index of vDisk" default:"-1"`
@@ -127,7 +127,7 @@ func init() {
 	type ServerAttachDiskOptions struct {
 		SERVER string `help:"ID or name of server"`
 		DISK   string `help:"ID of name of disk to attach"`
-		Driver string `help:"Driver" choices:"virtio|ide|scsi"`
+		Driver string `help:"deployer" choices:"virtio|ide|scsi"`
 		Cache  string `help:"Cache mode" choices:"writeback|none|writethrought"`
 	}
 	R(&ServerAttachDiskOptions{}, "server-attach-disk", "Attach an existing virtual disks to a virtual server", func(s *mcclient.ClientSession, args *ServerAttachDiskOptions) error {

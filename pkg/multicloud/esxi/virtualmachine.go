@@ -924,7 +924,7 @@ func (self *SVirtualMachine) CreateDisk(ctx context.Context, sizeMb int, uuid st
 // createDriverAndDisk will create a driver and disk associated with the driver
 func (self *SVirtualMachine) createDriverAndDisk(ctx context.Context, sizeMb int, uuid string, driver string) error {
 	if driver != "scsi" && driver != "pvscsi" {
-		return fmt.Errorf("Driver %s is not supported", driver)
+		return fmt.Errorf("deployer %s is not supported", driver)
 	}
 
 	deviceChange := make([]types.BaseVirtualDeviceConfigSpec, 0, 2)

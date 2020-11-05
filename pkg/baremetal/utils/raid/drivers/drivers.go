@@ -94,7 +94,7 @@ func BuildRaid(driver raid.IRaidDriver, confs []*api.BaremetalDiskConfig, adapte
 		return fmt.Errorf("Not found adapter by index %d", adapterIdx)
 	}
 	if err := buildRaid(adapter, confs); err != nil {
-		return fmt.Errorf("Driver %s, adapter %d build raid: %v", driver.GetName(), adapterIdx, err)
+		return fmt.Errorf("deployer %s, adapter %d build raid: %v", driver.GetName(), adapterIdx, err)
 	}
 	return nil
 }

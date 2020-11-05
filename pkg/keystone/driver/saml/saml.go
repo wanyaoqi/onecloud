@@ -33,7 +33,7 @@ import (
 	"yunion.io/x/onecloud/pkg/util/samlutils/sp"
 )
 
-// SAML 2.0 Service Provider Driver
+// SAML 2.0 Service Provider deployer
 type SSAMLDriver struct {
 	driver.SBaseIdentityDriver
 

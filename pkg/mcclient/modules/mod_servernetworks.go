@@ -26,7 +26,7 @@ func init() {
 		"guestnetworks",
 		[]string{"Guest_ID", "Guest",
 			"Network_ID", "Network", "Mac_addr",
-			"IP_addr", "Driver", "BW_limit", "Index",
+			"IP_addr", "deployer", "BW_limit", "Index",
 			"Virtual", "Ifname", "team_with"},
 		[]string{},
 		&Servers,

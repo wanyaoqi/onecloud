@@ -91,7 +91,7 @@ func init() {
 		SERVER  string `help:"ID or Name of Server"`
 		NETWORK string `help:"ID or Name of Wire"`
 		Mac     string `help:"Mac of NIC"`
-		Driver  string `help:"Driver model of vNIC" choices:"virtio|e1000|vmxnet3|rtl8139"`
+		Driver  string `help:"deployer model of vNIC" choices:"virtio|e1000|vmxnet3|rtl8139"`
 		Index   int64  `help:"Index of NIC" default:"-1"`
 		Ifname  string `help:"Interface name of vNIC on host"`
 	}

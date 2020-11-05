@@ -43,7 +43,7 @@ func (p *StoragePredicate) Clone() core.FitPredicate {
 			Fs:         &disk.Fs,
 			Format:     disk.Format,
 			MountPoint: &disk.Mountpoint,
-			Driver:     &disk.Driver,
+			deployer:     &disk.deployer,
 			Cache:      &disk.Cache,
 			Size:       int64(disk.SizeMb),
 			Storage:    &disk.Storage,

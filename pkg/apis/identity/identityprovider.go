@@ -119,7 +119,7 @@ type GetIdpSsoRedirectUriInput struct {
 type GetIdpSsoRedirectUriOutput struct {
 	// SSO跳转URI
 	Uri string `json:"uri"`
-	// Driver
+	// deployer
 	Driver string `json:"driver"`
 }
 

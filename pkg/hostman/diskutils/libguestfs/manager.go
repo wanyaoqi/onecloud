@@ -18,6 +18,11 @@ func Init(count int) error {
 	return nil
 }
 
+type guestfishs []*guestfish
+
 type GuestfsManager struct {
 	initGF sync.Once
+
+	runningFish guestfishs
+	workingFish guestfishs
 }

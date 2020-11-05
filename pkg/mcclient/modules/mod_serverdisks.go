@@ -26,7 +26,7 @@ func init() {
 		"guestdisks",
 		[]string{"Guest_ID", "Guest",
 			"Disk_ID", "Disk", "Disk_size",
-			"Driver", "Cache_mode", "Index", "Status", "Disk_type", "Storage_type"},
+			"deployer", "Cache_mode", "Index", "Status", "Disk_type", "Storage_type"},
 		[]string{},
 		&Servers,
 		&Disks)

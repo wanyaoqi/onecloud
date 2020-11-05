@@ -101,7 +101,7 @@ func (s BaremetalStorage) GetBlock() int64 {
 	OsVersion       string  `json:"os_version"`
 	Format          string  `json:"format"`
 	MountPoint      *string `json:"mountpoint"`
-	Driver          *string `json:"driver"`
+	deployer          *string `json:"driver"`
 	Cache           *string `json:"cache"`
 	ImageDiskFormat string  `json:"image_disk_format"`
 	Size            int64   `json:"size"`

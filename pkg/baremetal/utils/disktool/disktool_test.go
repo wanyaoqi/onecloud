@@ -43,7 +43,7 @@ func TestSSHCreate(t *testing.T) {
 	err := tool.FetchDiskConfs([]baremetal.DiskConfiguration{
 		{
 			Adapter: 0,
-			Driver:  baremetal.DISK_DRIVER_LINUX,
+			deployer:  baremetal.DISK_DRIVER_LINUX,
 		},
 	}).RetrieveDiskInfo()
 	if err != nil {

@@ -26,7 +26,7 @@ var (
 
 func init() {
 	Domains = DomainManager{NewIdentityV3Manager("domain", "domains",
-		[]string{"ID", "Name", "Enabled", "Description", "Driver", "Displayname"},
+		[]string{"ID", "Name", "Enabled", "Description", "deployer", "Displayname"},
 		[]string{})}
 
 	register(&Domains)

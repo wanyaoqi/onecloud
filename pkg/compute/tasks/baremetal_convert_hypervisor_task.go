@@ -74,7 +74,7 @@ func (self *BaremetalConvertHypervisorTask) OnGuestDeployComplete(ctx context.Co
 	hypervisor := self.getHypervisor()
 	driver := models.GetHostDriver(hypervisor)
 	if driver == nil {
-		self.SetStageFailed(ctx, jsonutils.NewString(fmt.Sprintf("Get Host Driver error %s", hypervisor)))
+		self.SetStageFailed(ctx, jsonutils.NewString(fmt.Sprintf("Get Host deployer error %s", hypervisor)))
 	}
 	err := driver.FinishConvert(self.UserCred, baremetal, guest, driver.GetHostType())
 	if err != nil {
