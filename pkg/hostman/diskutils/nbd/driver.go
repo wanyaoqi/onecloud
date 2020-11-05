@@ -12,6 +12,7 @@ import (
 	"yunion.io/x/log"
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/fsutils"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
 	"yunion.io/x/onecloud/pkg/util/procutils"
 	"yunion.io/x/onecloud/pkg/util/qemuimg"
 	"yunion.io/x/onecloud/pkg/util/qemutils"
@@ -21,7 +22,7 @@ import (
 const MAX_TRIES = 3
 
 type NBDDriver struct {
-	partitions            []*guestfs.SKVMGuestDiskPartition
+	partitions            []fsdriver.IDiskPartition
 	lvms                  []*SKVMGuestLVMPartition
 	imageRootBackFilePath string
 	imagePath             string
@@ -32,7 +33,7 @@ type NBDDriver struct {
 func NewNBDDriver(imagePath string) *NBDDriver {
 	return &NBDDriver{
 		imagePath:  imagePath,
-		partitions: make([]*guestfs.SKVMGuestDiskPartition, 0),
+		partitions: make([]fsdriver.IDiskPartition, 0),
 	}
 }
 
@@ -182,7 +183,7 @@ func (d *NBDDriver) setupLVMS() (bool, error) {
 		return false, err
 	}
 
-	lvmPartitions := []*guestfs.SKVMGuestDiskPartition{}
+	lvmPartitions := []fsdriver.IDiskPartition{}
 	for _, part := range d.partitions {
 		vgname := d.findLVMPartitions(part.GetPartDev())
 		if len(vgname) > 0 {
@@ -190,7 +191,9 @@ func (d *NBDDriver) setupLVMS() (bool, error) {
 			d.lvms = append(d.lvms, lvm)
 			if lvm.SetupDevice() {
 				if subparts := lvm.FindPartitions(); len(subparts) > 0 {
-					lvmPartitions = append(lvmPartitions, subparts...)
+					for i := 0; i < len(subparts); i++ {
+						lvmPartitions = append(lvmPartitions, subparts[i])
+					}
 				}
 			}
 		}
@@ -247,6 +250,10 @@ func (d *NBDDriver) putdownLVMs() {
 		lvm.PutdownDevice()
 	}
 	d.lvms = []*SKVMGuestLVMPartition{}
+}
+
+func (d *NBDDriver) GetPartitions() []fsdriver.IDiskPartition {
+	return d.partitions
 }
 
 func (d *NBDDriver) MakePartition(fs string) error {

@@ -46,6 +46,8 @@ type IDiskPartition interface {
 	Zerofiles(dir string, caseInsensitive bool) error
 	SupportSerialPorts() bool
 
+	GetPartDev() string
+	IsMounted() bool
 	Mount() bool
 	MountPartReadOnly() bool
 	Umount() bool

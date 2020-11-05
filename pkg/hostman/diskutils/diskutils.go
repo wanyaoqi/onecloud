@@ -16,6 +16,8 @@ package diskutils
 
 import (
 	"yunion.io/x/log"
+	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
+	"yunion.io/x/onecloud/pkg/hostman/hostdeployer/consts"
 
 	"yunion.io/x/onecloud/pkg/hostman/guestfs"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
@@ -24,9 +26,9 @@ import (
 //const MAX_TRIES = 3
 
 type SKVMGuestDisk struct {
-	imagePath string
+	//imagePath string
 	//nbdDev      string
-	partitions []*guestfs.SKVMGuestDiskPartition
+	//partitions []*guestfs.SKVMGuestDiskPartition
 	//lvms        []*nbd.SKVMGuestLVMPartition
 	//acquiredLvm bool
 
@@ -36,10 +38,21 @@ type SKVMGuestDisk struct {
 }
 
 func NewKVMGuestDisk(imagePath string) *SKVMGuestDisk {
-	var ret = new(SKVMGuestDisk)
-	ret.imagePath = imagePath
-	ret.partitions = make([]*guestfs.SKVMGuestDiskPartition, 0)
-	return ret
+	return &SKVMGuestDisk{
+		deployer: NewDeployer(imagePath, driver),
+	}
+}
+
+func newDeployer(imagePath, driver string) IDeployer {
+	switch driver {
+	case consts.DEPLOY_DRIVER_NBD:
+		return nbd.NewNBDDriver(imagePath)
+	case consts.DEPLOY_DRIVER_LIBGUESTFS:
+		return libguestfs.NewLibguestfsDriver()
+	default:
+		return nbd.NewNBDDriver(imagePath)
+	}
+
 }
 
 func (d *SKVMGuestDisk) IsLVMPartition() bool {
@@ -55,15 +68,16 @@ func (d *SKVMGuestDisk) Disconnect() error {
 }
 
 func (d *SKVMGuestDisk) DetectIsUEFISupport(rootfs fsdriver.IRootFsDriver) bool {
-	for i := 0; i < len(d.partitions); i++ {
-		if d.partitions[i].IsMounted() {
-			if rootfs.DetectIsUEFISupport(d.partitions[i]) {
+	partitions := d.deployer.GetPartitions()
+	for i := 0; i < len(partitions); i++ {
+		if partitions[i].IsMounted() {
+			if rootfs.DetectIsUEFISupport(partitions[i]) {
 				return true
 			}
 		} else {
-			if d.partitions[i].Mount() {
-				support := rootfs.DetectIsUEFISupport(d.partitions[i])
-				d.partitions[i].Umount()
+			if partitions[i].Mount() {
+				support := rootfs.DetectIsUEFISupport(partitions[i])
+				partitions[i].Umount()
 				if support {
 					return true
 				}
@@ -81,18 +95,19 @@ func (d *SKVMGuestDisk) MountKvmRootfs() fsdriver.IRootFsDriver {
 	return d.mountKvmRootfs(false)
 }
 func (d *SKVMGuestDisk) mountKvmRootfs(readonly bool) fsdriver.IRootFsDriver {
-	for i := 0; i < len(d.partitions); i++ {
-		mountFunc := d.partitions[i].Mount
+	partitions := d.deployer.GetPartitions()
+	for i := 0; i < len(partitions); i++ {
+		mountFunc := partitions[i].Mount
 		if readonly {
-			mountFunc = d.partitions[i].MountPartReadOnly
+			mountFunc = partitions[i].MountPartReadOnly
 		}
 		if mountFunc() {
-			if fs := guestfs.DetectRootFs(d.partitions[i]); fs != nil {
+			if fs := guestfs.DetectRootFs(partitions[i]); fs != nil {
 				log.Infof("Use rootfs %s, partition %s",
-					fs, d.partitions[i].GetPartDev())
+					fs, partitions[i].GetPartDev())
 				return fs
 			} else {
-				d.partitions[i].Umount()
+				partitions[i].Umount()
 			}
 		}
 	}
@@ -117,7 +132,7 @@ func (d *SKVMGuestDisk) UmountRootfs(fd fsdriver.IRootFsDriver) {
 }
 
 func (d *SKVMGuestDisk) MakePartition(fs string) error {
-	return d.deployer.Mkpartition(fs)
+	return d.deployer.MakePartition(fs)
 }
 
 func (d *SKVMGuestDisk) FormatPartition(fs, uuid string) error {
@@ -125,7 +140,7 @@ func (d *SKVMGuestDisk) FormatPartition(fs, uuid string) error {
 }
 
 func (d *SKVMGuestDisk) ResizePartition() error {
-	return d.deployer.ResizeDiskFs()
+	return d.deployer.ResizePartition()
 }
 
 func (d *SKVMGuestDisk) Zerofree() {

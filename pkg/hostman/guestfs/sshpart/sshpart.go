@@ -200,6 +200,10 @@ func (p *SSHPartition) IsMounted() bool {
 	return true
 }
 
+func (p *SSHPartition) GetPartDev() string {
+	return ""
+}
+
 func (p *SSHPartition) Chmod(sPath string, mode uint32, caseI bool) error {
 	sPath = p.GetLocalPath(sPath, caseI)
 	if sPath != "" {

@@ -40,11 +40,10 @@ func GetIDisk(params *apis.DeployParams, driver string) IDisk {
 }
 
 type IDeployer interface {
-	ConnectionPrecheck() string
-	OnConnected(pathType string) error
 	Connect() error
 	Disconnect() error
 
+	GetPartitions() []fsdriver.IDiskPartition
 	IsLVMPartition() bool
 	Zerofree()
 	ResizePartition() error
