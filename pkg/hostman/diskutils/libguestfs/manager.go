@@ -2,27 +2,151 @@ package libguestfs
 
 import (
 	"sync"
+	"time"
 
-	"yunion.io/x/onecloud/pkg/appsrv"
-	"yunion.io/x/pkg/errors"
+	"yunion.io/x/log"
 )
 
-var GuestFSWorkManager *appsrv.SWorkerManager
+type ErrorFish string
 
-func Init(count int) error {
-	if GuestFSWorkManager != nil {
-		return errors.Errorf("repeat init")
-	}
-	GuestFSWorkManager = appsrv.NewWorkerManager(
-		"libguestfs-worker", count, appsrv.DEFAULT_BACKLOG, false)
-	return nil
+func (e ErrorFish) Error() string {
+	return string(e)
 }
 
-type guestfishs []*guestfish
+const (
+	DEFAULT_FISHCAGE_SIZE = 1
+
+	ErrFishsMismatch = ErrorFish("fishs mismatch")
+	ErrFishsWorking  = ErrorFish("fishs working")
+)
+
+var guestfsManager *GuestfsManager
+
+func Init(count int) {
+	if guestfsManager == nil {
+		guestfsManager = NewGuestfsManager(count)
+		time.AfterFunc(time.Minute*3, guestfsManager.makeFishHappy)
+	}
+}
 
 type GuestfsManager struct {
-	initGF sync.Once
+	fishMaximum      int
+	happyFishCount   int
+	workingFishCount int
 
-	runningFish guestfishs
-	workingFish guestfishs
+	fishs    map[*guestfish]bool
+	fishChan chan *guestfish
+	fishlock sync.Mutex
+
+	lastTimeFishing time.Time
+}
+
+func NewGuestfsManager(count int) *GuestfsManager {
+	if count < 1 {
+		count = DEFAULT_FISHCAGE_SIZE
+	}
+	return &GuestfsManager{
+		fishMaximum: count,
+		fishs:       make(map[*guestfish]bool, count),
+		fishChan:    make(chan *guestfish, count),
+	}
+}
+
+func (m *GuestfsManager) AcquireFish() (*guestfish, error) {
+	m.fishlock.Lock()
+	defer m.fishlock.Unlock()
+
+	m.lastTimeFishing = time.Now()
+	fish, err := m.acquireFish()
+	if err == ErrFishsWorking {
+		return m.waitingFishFinish(), nil
+	} else if err != nil {
+		return nil, err
+	}
+	return fish, nil
+}
+
+func (m *GuestfsManager) acquireFish() (*guestfish, error) {
+	if m.happyFishCount == 0 {
+		if 0 < m.workingFishCount && m.workingFishCount < m.fishMaximum {
+			fish, err := newGuestfish()
+			if err != nil {
+				return nil, err
+			}
+			m.fishs[fish] = true
+			m.workingFishCount++
+			return fish, nil
+		} else {
+			return nil, ErrFishsWorking
+		}
+	} else {
+		for fish, working := range m.fishs {
+			if !working {
+				m.fishs[fish] = true
+				m.workingFishCount++
+				m.happyFishCount--
+				return fish, nil
+			}
+		}
+		return nil, ErrFishsMismatch
+	}
+}
+
+func (m *GuestfsManager) waitingFishFinish() *guestfish {
+	select {
+	case fish := <-m.fishChan:
+		return fish
+	}
+}
+
+func (m *GuestfsManager) ReleaseFish(fish *guestfish) {
+	err := m.washfish(fish)
+	m.fishlock.Lock()
+	defer m.fishlock.Unlock()
+	if err != nil {
+		log.Errorf("wash fish failed: %s", err)
+		err = fish.quit()
+		if err != nil {
+			log.Errorf("fish quit failed: %s", err)
+		}
+		delete(m.fishs, fish)
+		m.workingFishCount--
+	}
+	m.fishChan <- fish
+}
+
+func (m *GuestfsManager) washfish(fish *guestfish) error {
+	return fish.removeDrive()
+}
+
+func (m *GuestfsManager) makeFishHappy() {
+	defer time.AfterFunc(time.Minute*10, m.makeFishHappy)
+	m.fishlock.Lock()
+	defer m.fishlock.Unlock()
+	if m.lastTimeFishing.IsZero() || time.Now().Sub(m.lastTimeFishing) < time.Minute*10 {
+		return
+	}
+
+Loop:
+	for {
+		select {
+		case fish := <-m.fishChan:
+			m.fishs[fish] = false
+			m.happyFishCount++
+			m.workingFishCount--
+		default:
+			break Loop
+		}
+	}
+
+	for fish, working := range m.fishs {
+		if !working {
+			err := fish.quit()
+			if err != nil {
+				log.Errorf("fish quit failed: %s", err)
+			}
+			m.happyFishCount--
+			delete(m.fishs, fish)
+		}
+	}
 }

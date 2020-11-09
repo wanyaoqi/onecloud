@@ -16,11 +16,12 @@ package diskutils
 
 import (
 	"yunion.io/x/log"
-	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
-	"yunion.io/x/onecloud/pkg/hostman/hostdeployer/consts"
 
+	"yunion.io/x/onecloud/pkg/hostman/diskutils/libguestfs"
+	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
+	"yunion.io/x/onecloud/pkg/hostman/hostdeployer/consts"
 )
 
 //const MAX_TRIES = 3
@@ -37,9 +38,9 @@ type SKVMGuestDisk struct {
 	deployer IDeployer
 }
 
-func NewKVMGuestDisk(imagePath string) *SKVMGuestDisk {
+func NewKVMGuestDisk(imagePath, driver string) *SKVMGuestDisk {
 	return &SKVMGuestDisk{
-		deployer: NewDeployer(imagePath, driver),
+		deployer: newDeployer(imagePath, driver),
 	}
 }
 

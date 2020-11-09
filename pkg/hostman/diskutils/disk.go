@@ -31,11 +31,11 @@ func GetIDisk(params *apis.DeployParams, driver string) IDisk {
 	hypervisor := params.GuestDesc.Hypervisor
 	switch hypervisor {
 	case comapi.HYPERVISOR_KVM:
-		return NewKVMGuestDisk(params.DiskPath)
+		return NewKVMGuestDisk(params.DiskPath, driver)
 	case comapi.HYPERVISOR_ESXI:
 		return NewVDDKDisk(params.VddkInfo, params.DiskPath)
 	default:
-		return NewKVMGuestDisk(params.DiskPath)
+		return NewKVMGuestDisk(params.DiskPath, driver)
 	}
 }
 

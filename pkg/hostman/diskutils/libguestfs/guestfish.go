@@ -23,7 +23,8 @@ type guestfish struct {
 	stderr       *bufio.Scanner
 	stderrCloser io.Closer
 
-	lock sync.Mutex
+	lock  sync.Mutex
+	label string
 }
 
 const GuestFishToken = "><fs>"
@@ -65,14 +66,21 @@ func newGuestfish() (*guestfish, error) {
 	return gf, nil
 }
 
+func (fish *guestfish) execute(cmd string) ([]string, error) {
+	fish.lock.Lock()
+	defer fish.lock.Unlock()
+	_, err := fish.stdin.WriteString(cmd)
+	if err != nil {
+		return nil, errros.Wrapf(err, "exec cmd %s", cmd)
+	}
+	return fish.fetch()
+}
+
 func (fish *guestfish) fetch() ([]string, error) {
 	var (
 		stdout, stderr = make([]string, 0), make([]string, 0)
 		err            error
 	)
-
-	fish.lock.Lock()
-	defer fish.lock.Unlock()
 
 	for fish.stdout.Scan() {
 		line := fish.stdout.Text()
@@ -102,47 +110,41 @@ func (fish *guestfish) fetchError() error {
 }
 
 func (fish *guestfish) run() error {
-	_, err := fish.stdin.WriteString("run\n")
-	if err != nil {
-		return err
-	}
-	return fish.fetchError()
+	_, err := fish.execute("run\n")
+	return err
 }
 
 func (fish *guestfish) quit() error {
-	_, err := fish.stdin.WriteString("quit\n")
-	if err != nil {
-		return err
-	}
-	return fish.fetchError()
+	_, err := fish.execute("quit\n")
+	return err
 }
 
 func (fish *guestfish) addDrive(path, label string) error {
-	_, err := fish.stdin.WriteString(fmt.Sprintf("add-drive %s label:%s\n", path, label))
+	_, err := fish.execute(fmt.Sprintf("add-drive %s label:%s\n", path, label))
 	if err != nil {
-		return errors.Wrapf(err, "add drive %s", path)
+		return err
 	}
-	return fish.fetchError()
-}
-
-func (fish *guestfish) removeDrive(label string) error {
-	_, err := fish.stdin.WriteString(fmt.Sprintf("remove-drive %s\n", label))
-	if err != nil {
-		return errors.Wrapf(err, "remove drive %s", label)
-	}
+	fish.label = label
 	return nil
 }
 
-func (fish *guestfish) listFilesystems() (sortedmap.SSortedMap, error) {
-	_, err := fish.stdin.WriteString("list-filesystems\n")
-	if err != nil {
-		return nil, errors.Wrap(err, "list filesystems")
+func (fish *guestfish) removeDrive() error {
+	if len(fish.label) == 0 {
+		return errors.Errorf("no drive add")
 	}
-	output, err := fish.fetch()
+	_, err := fish.execute(fmt.Sprintf("remove-drive %s\n", fish.label))
+	if err != nil {
+		return err
+	}
+	fish.label = ""
+	return err
+}
+
+func (fish *guestfish) listFilesystems() (sortedmap.SSortedMap, error) {
+	output, err := fish.execute("list-filesystems\n")
 	if err != nil {
 		return nil, err
 	}
-
 	return fish.parseListFilesystemsOutput(output), nil
 }
 
@@ -163,53 +165,39 @@ func (fish *guestfish) parseListFilesystemsOutput(output []string) sortedmap.SSo
 	return res
 }
 
+func (fish *guestfish) listDevices() ([]string, error) {
+	return fish.execute("list-devices\n")
+}
+
 func (fish *guestfish) mount(partition string) error {
-	_, err := fish.stdin.WriteString(fmt.Sprintf("mount %s /\n", partition))
-	if err != nil {
-		return errors.Wrapf(err, "mount %s", partition)
-	}
-	return fish.fetchError()
+	_, err := fish.execute(fmt.Sprintf("mount %s /\n", partition))
+	return err
 }
 
 func (fish *guestfish) mountLocal(localmountpoint string) error {
-	_, err := fish.stdin.WriteString(fmt.Sprintf("mount-local %s\n", localmountpoint))
-	if err != nil {
-		return errors.Wrapf(err, "mount local %s", localmountpoint)
-	}
-	return fish.fetchError()
+	_, err := fish.execute(fmt.Sprintf("mount-local %s\n", localmountpoint))
+	return err
 }
 
 func (fish *guestfish) umount(partition string) error {
-	_, err := fish.stdin.WriteString("umount\n")
-	if err != nil {
-		return errors.Wrap(err, "umount")
-	}
-	return fish.fetchError()
+	_, err := fish.execute("umount\n")
+	return err
 }
 
 func (fish *guestfish) umountLocal() error {
-	_, err := fish.stdin.WriteString("umount-local\n")
-	if err != nil {
-		return errors.Wrap(err, "umount local")
-	}
-	return fish.fetchError()
+	_, err := fish.execute("umount-local\n")
+	return err
 }
 
 /* This should only be called after "mount_local" returns successfully.
  * The call will not return until the filesystem is unmounted. */
 func (fish *guestfish) mountLocalRun() error {
-	_, err := fish.stdin.WriteString("umount-local-run\n")
-	if err != nil {
-		return errors.Wrap(err, "mount local run")
-	}
-	return fish.fetchError()
+	_, err := fish.execute("umount-local-run\n")
+	return err
 }
 
 /* Clears the LVM cache and performs a volume group scan. */
 func (fish *guestfish) lvmClearFilter() error {
-	_, err := fish.stdin.WriteString("lvm-clear-filter")
-	if err != nil {
-		return errors.Wrap(err, "lvm clear filter")
-	}
-	return fish.fetchError()
+	_, err := fish.execute("lvm-clear-filter")
+	return err
 }
