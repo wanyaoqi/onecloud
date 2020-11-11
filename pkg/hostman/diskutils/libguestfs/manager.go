@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"yunion.io/x/log"
+	"yunion.io/x/onecloud/pkg/hostman/diskutils/libguestfs/guestfish"
 )
 
 type ErrorFish string
@@ -34,8 +35,8 @@ type GuestfsManager struct {
 	happyFishCount   int
 	workingFishCount int
 
-	fishs    map[*guestfish]bool
-	fishChan chan *guestfish
+	fishs    map[*guestfish.Guestfish]bool
+	fishChan chan *guestfish.Guestfish
 	fishlock sync.Mutex
 
 	lastTimeFishing time.Time
@@ -47,12 +48,12 @@ func NewGuestfsManager(count int) *GuestfsManager {
 	}
 	return &GuestfsManager{
 		fishMaximum: count,
-		fishs:       make(map[*guestfish]bool, count),
-		fishChan:    make(chan *guestfish, count),
+		fishs:       make(map[*guestfish.Guestfish]bool, count),
+		fishChan:    make(chan *guestfish.Guestfish, count),
 	}
 }
 
-func (m *GuestfsManager) AcquireFish() (*guestfish, error) {
+func (m *GuestfsManager) AcquireFish() (*guestfish.Guestfish, error) {
 	m.fishlock.Lock()
 	defer m.fishlock.Unlock()
 
@@ -66,10 +67,10 @@ func (m *GuestfsManager) AcquireFish() (*guestfish, error) {
 	return fish, nil
 }
 
-func (m *GuestfsManager) acquireFish() (*guestfish, error) {
+func (m *GuestfsManager) acquireFish() (*guestfish.Guestfish, error) {
 	if m.happyFishCount == 0 {
 		if 0 < m.workingFishCount && m.workingFishCount < m.fishMaximum {
-			fish, err := newGuestfish()
+			fish, err := guestfish.newGuestfish()
 			if err != nil {
 				return nil, err
 			}
@@ -92,14 +93,14 @@ func (m *GuestfsManager) acquireFish() (*guestfish, error) {
 	}
 }
 
-func (m *GuestfsManager) waitingFishFinish() *guestfish {
+func (m *GuestfsManager) waitingFishFinish() *guestfish.Guestfish {
 	select {
 	case fish := <-m.fishChan:
 		return fish
 	}
 }
 
-func (m *GuestfsManager) ReleaseFish(fish *guestfish) {
+func (m *GuestfsManager) ReleaseFish(fish *guestfish.Guestfish) {
 	err := m.washfish(fish)
 	m.fishlock.Lock()
 	defer m.fishlock.Unlock()
@@ -115,7 +116,7 @@ func (m *GuestfsManager) ReleaseFish(fish *guestfish) {
 	m.fishChan <- fish
 }
 
-func (m *GuestfsManager) washfish(fish *guestfish) error {
+func (m *GuestfsManager) washfish(fish *guestfish.Guestfish) error {
 	return fish.removeDrive()
 }
 

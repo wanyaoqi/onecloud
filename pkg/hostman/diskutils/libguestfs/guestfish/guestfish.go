@@ -1,4 +1,4 @@
-package libguestfs
+package guestfish
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 	"yunion.io/x/pkg/sortedmap"
 )
 
-type guestfish struct {
+type Guestfish struct {
 	*exec.Cmd
 
 	stdin        *bufio.Writer
@@ -29,20 +29,20 @@ type guestfish struct {
 
 const GuestFishToken = "><fs>"
 
-func newGuestfish() (*guestfish, error) {
-	gf := &guestfish{Cmd: exec.Command("guestfish")}
+func newGuestfish() (*Guestfish, error) {
+	gf := &Guestfish{Cmd: exec.Command("Guestfish")}
 
 	stdin, err := gf.StdinPipe()
 	if err != nil {
-		return nil, errors.Wrap(err, "guestfish stdin pipe")
+		return nil, errors.Wrap(err, "Guestfish stdin pipe")
 	}
 	stdout, err := gf.StdoutPipe()
 	if err != nil {
-		return nil, errors.Wrap(err, "guestfish stdout pipe")
+		return nil, errors.Wrap(err, "Guestfish stdout pipe")
 	}
 	stderr, err := gf.StderrPipe()
 	if err != nil {
-		return nil, errors.Wrap(err, "guestfish stderr pipe")
+		return nil, errors.Wrap(err, "Guestfish stderr pipe")
 	}
 
 	gf.stdin = bufio.NewWriter(stdin)
@@ -56,27 +56,27 @@ func newGuestfish() (*guestfish, error) {
 	gf.stderrCloser = stderr
 
 	if err = gf.Start(); err != nil {
-		return nil, errors.Wrap(err, "start guestfish")
+		return nil, errors.Wrap(err, "start Guestfish")
 	}
 
-	if err = gf.run(); err != nil {
+	if err = gf.Run(); err != nil {
 		return nil, err
 	}
 
 	return gf, nil
 }
 
-func (fish *guestfish) execute(cmd string) ([]string, error) {
+func (fish *Guestfish) execute(cmd string) ([]string, error) {
 	fish.lock.Lock()
 	defer fish.lock.Unlock()
 	_, err := fish.stdin.WriteString(cmd)
 	if err != nil {
-		return nil, errros.Wrapf(err, "exec cmd %s", cmd)
+		return nil, errors.Wrapf(err, "exec cmd %s", cmd)
 	}
 	return fish.fetch()
 }
 
-func (fish *guestfish) fetch() ([]string, error) {
+func (fish *Guestfish) fetch() ([]string, error) {
 	var (
 		stdout, stderr = make([]string, 0), make([]string, 0)
 		err            error
@@ -84,7 +84,7 @@ func (fish *guestfish) fetch() ([]string, error) {
 
 	for fish.stdout.Scan() {
 		line := fish.stdout.Text()
-		log.Debugf("guestfish stdout: %s", line)
+		log.Debugf("Guestfish stdout: %s", line)
 		if strings.HasPrefix(line, GuestFishToken) {
 			break
 		}
@@ -93,7 +93,7 @@ func (fish *guestfish) fetch() ([]string, error) {
 
 	for fish.stderr.Scan() {
 		line := fish.stderr.Text()
-		log.Debugf("guestfish stderr: %s", line)
+		log.Debugf("Guestfish stderr: %s", line)
 		stderr = append(stderr, line)
 	}
 
@@ -104,22 +104,22 @@ func (fish *guestfish) fetch() ([]string, error) {
 }
 
 /* Fetch error message from stderr, until got ><fs> from stdout */
-func (fish *guestfish) fetchError() error {
+func (fish *Guestfish) fetchError() error {
 	_, err := fish.fetch()
 	return err
 }
 
-func (fish *guestfish) run() error {
+func (fish *Guestfish) Run() error {
 	_, err := fish.execute("run\n")
 	return err
 }
 
-func (fish *guestfish) quit() error {
+func (fish *Guestfish) Quit() error {
 	_, err := fish.execute("quit\n")
 	return err
 }
 
-func (fish *guestfish) addDrive(path, label string) error {
+func (fish *Guestfish) AddDrive(path, label string) error {
 	_, err := fish.execute(fmt.Sprintf("add-drive %s label:%s\n", path, label))
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (fish *guestfish) addDrive(path, label string) error {
 	return nil
 }
 
-func (fish *guestfish) removeDrive() error {
+func (fish *Guestfish) RemoveDrive() error {
 	if len(fish.label) == 0 {
 		return errors.Errorf("no drive add")
 	}
@@ -140,7 +140,7 @@ func (fish *guestfish) removeDrive() error {
 	return err
 }
 
-func (fish *guestfish) listFilesystems() (sortedmap.SSortedMap, error) {
+func (fish *Guestfish) ListFilesystems() (sortedmap.SSortedMap, error) {
 	output, err := fish.execute("list-filesystems\n")
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (fish *guestfish) listFilesystems() (sortedmap.SSortedMap, error) {
 	return fish.parseListFilesystemsOutput(output), nil
 }
 
-func (fish *guestfish) parseListFilesystemsOutput(output []string) sortedmap.SSortedMap {
+func (fish *Guestfish) parseListFilesystemsOutput(output []string) sortedmap.SSortedMap {
 	/* /dev/sda1: xfs
 	   /dev/centos/root: xfs
 	   /dev/centos/swap: swap */
@@ -158,46 +158,50 @@ func (fish *guestfish) parseListFilesystemsOutput(output []string) sortedmap.SSo
 		segs := strings.Split(strings.TrimSpace(line), " ")
 		log.Debugf("parse line of list filesystems: %v", segs)
 		if len(segs) != 2 {
-			log.Warningf("guestfish: parse list filesystem got unwanted line: %s", line)
+			log.Warningf("Guestfish: parse list filesystem got unwanted line: %s", line)
 		}
 		sortedmap.Add(res, segs[0], segs[1])
 	}
 	return res
 }
 
-func (fish *guestfish) listDevices() ([]string, error) {
+func (fish *Guestfish) ListDevices() ([]string, error) {
 	return fish.execute("list-devices\n")
 }
 
-func (fish *guestfish) mount(partition string) error {
+func (fish *Guestfish) Mount(partition string) error {
 	_, err := fish.execute(fmt.Sprintf("mount %s /\n", partition))
 	return err
 }
 
-func (fish *guestfish) mountLocal(localmountpoint string) error {
+func (fish *Guestfish) MountLocal(localmountpoint string) error {
 	_, err := fish.execute(fmt.Sprintf("mount-local %s\n", localmountpoint))
 	return err
 }
 
-func (fish *guestfish) umount(partition string) error {
+func (fish *Guestfish) Umount(partition string) error {
 	_, err := fish.execute("umount\n")
 	return err
 }
 
-func (fish *guestfish) umountLocal() error {
+func (fish *Guestfish) UmountLocal() error {
 	_, err := fish.execute("umount-local\n")
 	return err
 }
 
 /* This should only be called after "mount_local" returns successfully.
  * The call will not return until the filesystem is unmounted. */
-func (fish *guestfish) mountLocalRun() error {
+func (fish *Guestfish) MountLocalRun() error {
 	_, err := fish.execute("umount-local-run\n")
 	return err
 }
 
 /* Clears the LVM cache and performs a volume group scan. */
-func (fish *guestfish) lvmClearFilter() error {
+func (fish *Guestfish) LvmClearFilter() error {
 	_, err := fish.execute("lvm-clear-filter")
 	return err
+}
+
+func (fish *Guestfish) SfdiskL(dev string) ([]string, error) {
+	return fish.execute(fmt.Sprintf("sfdisk-l %s", dev))
 }

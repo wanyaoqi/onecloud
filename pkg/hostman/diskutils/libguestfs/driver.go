@@ -7,6 +7,7 @@ import (
 	"yunion.io/x/pkg/errors"
 	"yunion.io/x/pkg/sortedmap"
 
+	"yunion.io/x/onecloud/pkg/hostman/diskutils/libguestfs/guestfish"
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
 )
@@ -28,18 +29,18 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-type LibguestfsDriver struct {
+type SLibguestfsDriver struct {
 	nbddev    string
 	diskLabel string
 	fsmap     sortedmap.SSortedMap
-	fish      *guestfish
+	fish      *guestfish.Guestfish
 }
 
-func NewLibguestfsDriver() *LibguestfsDriver {
-	return &LibguestfsDriver{}
+func NewLibguestfsDriver() *SLibguestfsDriver {
+	return &SLibguestfsDriver{}
 }
 
-func (d *LibguestfsDriver) Connect() error {
+func (d *SLibguestfsDriver) Connect() error {
 	fish, err := guestfsManager.AcquireFish()
 	if err != nil {
 		return err
@@ -52,16 +53,16 @@ func (d *LibguestfsDriver) Connect() error {
 	}
 
 	lable := RandStringBytes(DISK_LABEL_LENGTH)
-	err = fish.addDrive(d.nbddev, lable)
+	err = fish.AddDrive(d.nbddev, lable)
 	if err != nil {
 		return err
 	}
 	d.diskLabel = lable
 
-	if err = fish.lvmClearFilter(); err != nil {
+	if err = fish.LvmClearFilter(); err != nil {
 		return err
 	}
-	fsmap, err := fish.listFilesystems()
+	fsmap, err := fish.ListFilesystems()
 	if err != nil {
 		return err
 	}
@@ -69,18 +70,18 @@ func (d *LibguestfsDriver) Connect() error {
 
 	devs := d.fsmap.Keys()
 	for i := 0; i < len(devs); i++ {
-		dev := devs[i]
-		ifs, _ := d.fsmap.Get(devs[i])
-		fs := ifs.(string)
+		//dev := devs[i]
+		//ifs, _ := d.fsmap.Get(devs[i])
+		//fs := ifs.(string)
 
 	}
 
 	return nil
 }
 
-func (d *LibguestfsDriver) Disconnect() error {
+func (d *SLibguestfsDriver) Disconnect() error {
 	if len(d.diskLabel) > 0 {
-		if err := d.fish.removeDrive(); err != nil {
+		if err := d.fish.RemoveDrive(); err != nil {
 			return err
 		}
 		d.diskLabel = ""
@@ -92,26 +93,26 @@ func (d *LibguestfsDriver) Disconnect() error {
 	return nil
 }
 
-func (d *LibguestfsDriver) GetPartitions() []fsdriver.IDiskPartition {
+func (d *SLibguestfsDriver) GetPartitions() []fsdriver.IDiskPartition {
 	return nil
 }
 
-func (d *LibguestfsDriver) IsLVMPartition() bool {
+func (d *SLibguestfsDriver) IsLVMPartition() bool {
 	return false
 }
 
-func (d *LibguestfsDriver) Zerofree() {
+func (d *SLibguestfsDriver) Zerofree() {
 
 }
 
-func (d *LibguestfsDriver) ResizePartition() error {
+func (d *SLibguestfsDriver) ResizePartition() error {
 	return nil
 }
 
-func (d *LibguestfsDriver) FormatPartition(fs, uuid string) error {
+func (d *SLibguestfsDriver) FormatPartition(fs, uuid string) error {
 	return nil
 }
 
-func (d *LibguestfsDriver) MakePartition(fs string) error {
+func (d *SLibguestfsDriver) MakePartition(fs string) error {
 	return nil
 }

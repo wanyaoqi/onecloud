@@ -21,10 +21,11 @@ import (
 	"time"
 
 	"yunion.io/x/log"
-	"yunion.io/x/onecloud/pkg/hostman/guestfs"
 	"yunion.io/x/pkg/errors"
 	"yunion.io/x/pkg/utils"
 
+	"yunion.io/x/onecloud/pkg/hostman/guestfs"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
 	"yunion.io/x/onecloud/pkg/util/fileutils2"
 	"yunion.io/x/onecloud/pkg/util/procutils"
 )
@@ -38,6 +39,8 @@ type SKVMGuestDiskPartition struct {
 	sourceDev string
 	IsLVMPart bool
 }
+
+var _ fsdriver.IDiskPartition = &SKVMGuestDiskPartition{}
 
 func NewKVMGuestDiskPartition(devPath, sourceDev string, isLVM bool) *SKVMGuestDiskPartition {
 	var res = new(SKVMGuestDiskPartition)

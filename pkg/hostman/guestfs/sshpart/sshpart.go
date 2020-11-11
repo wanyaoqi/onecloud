@@ -44,6 +44,8 @@ type SSHPartition struct {
 	part      *disktool.Partition
 }
 
+var _ fsdriver.IDiskPartition = &SSHPartition{}
+
 func NewSSHPartition(term *ssh.Client, part *disktool.Partition) *SSHPartition {
 	p := new(SSHPartition)
 	p.term = term
