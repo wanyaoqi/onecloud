@@ -24,7 +24,7 @@ import (
 	"yunion.io/x/log"
 	"yunion.io/x/pkg/util/netutils"
 
-	fsdriver "yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
 	deployapi "yunion.io/x/onecloud/pkg/hostman/hostdeployer/apis"
 )
 

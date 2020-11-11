@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"yunion.io/x/log"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/kvmpart"
 	"yunion.io/x/pkg/errors"
 
 	"yunion.io/x/onecloud/pkg/hostman/guestfs"
@@ -424,7 +425,7 @@ func (vd *VDDKDisk) DisconnectBlockDevice() error {
 }
 
 type VDDKPartition struct {
-	*guestfs.SLocalGuestFS
+	*kvmpart.SLocalGuestFS
 }
 
 func (vp *VDDKPartition) Mount() bool {
@@ -449,8 +450,4 @@ func (vp *VDDKPartition) IsReadonly() bool {
 func (vp *VDDKPartition) GetPhysicalPartitionType() string {
 	log.Debugf("VDDKPartition.GetPhysicalPartitionType not implement")
 	return ""
-}
-
-func newVDDKPartition(mntPath string) *VDDKPartition {
-	return &VDDKPartition{guestfs.NewLocalGuestFS(mntPath)}
 }

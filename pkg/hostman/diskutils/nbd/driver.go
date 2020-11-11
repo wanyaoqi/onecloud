@@ -11,8 +11,8 @@ import (
 
 	"yunion.io/x/log"
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/fsutils"
-	"yunion.io/x/onecloud/pkg/hostman/guestfs"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/kvmpart"
 	"yunion.io/x/onecloud/pkg/util/procutils"
 	"yunion.io/x/onecloud/pkg/util/qemuimg"
 	"yunion.io/x/onecloud/pkg/util/qemutils"
@@ -137,7 +137,7 @@ func (d *NBDDriver) findPartitions() error {
 	}
 	for i := 0; i < len(files); i++ {
 		if files[i].Name() != dev && strings.HasPrefix(files[i].Name(), dev+"p") {
-			var part = guestfs.NewKVMGuestDiskPartition(path.Join(devpath, files[i].Name()), "", false)
+			var part = kvmpart.NewKVMGuestDiskPartition(path.Join(devpath, files[i].Name()), "", false)
 			d.partitions = append(d.partitions, part)
 		}
 	}

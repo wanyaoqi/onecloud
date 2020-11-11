@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package guestfs
+package kvmpart
 
 import (
 	"fmt"
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"yunion.io/x/log"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs"
 	"yunion.io/x/pkg/errors"
 	"yunion.io/x/pkg/utils"
 
@@ -79,7 +80,7 @@ func (p *SKVMGuestDiskPartition) GetPartDev() string {
 }
 
 func (p *SKVMGuestDiskPartition) IsReadonly() bool {
-	return IsPartitionReadonly(p)
+	return guestfs.IsPartitionReadonly(p)
 }
 
 func (p *SKVMGuestDiskPartition) getFsFormat() string {

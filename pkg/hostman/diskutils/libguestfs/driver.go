@@ -67,6 +67,14 @@ func (d *LibguestfsDriver) Connect() error {
 	}
 	d.fsmap = fsmap
 
+	devs := d.fsmap.Keys()
+	for i := 0; i < len(devs); i++ {
+		dev := devs[i]
+		ifs, _ := d.fsmap.Get(devs[i])
+		fs := ifs.(string)
+
+	}
+
 	return nil
 }
 

@@ -1,4 +1,4 @@
-package guestfs
+package kvmpart
 
 import (
 	"sync"
