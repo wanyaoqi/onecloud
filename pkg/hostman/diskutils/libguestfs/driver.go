@@ -10,6 +10,7 @@ import (
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/libguestfs/guestfish"
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
+	"yunion.io/x/onecloud/pkg/hostman/guestfs/guestfishpart"
 )
 
 const (
@@ -32,8 +33,11 @@ func init() {
 type SLibguestfsDriver struct {
 	nbddev    string
 	diskLabel string
+	lvmParts  []string
 	fsmap     sortedmap.SSortedMap
 	fish      *guestfish.Guestfish
+
+	parts []fsdriver.IDiskPartition
 }
 
 func NewLibguestfsDriver() *SLibguestfsDriver {
@@ -53,7 +57,7 @@ func (d *SLibguestfsDriver) Connect() error {
 	}
 
 	lable := RandStringBytes(DISK_LABEL_LENGTH)
-	err = fish.AddDrive(d.nbddev, lable)
+	err = fish.AddDrive(d.nbddev, lable, false)
 	if err != nil {
 		return err
 	}
@@ -62,18 +66,35 @@ func (d *SLibguestfsDriver) Connect() error {
 	if err = fish.LvmClearFilter(); err != nil {
 		return err
 	}
+
+	devices, err := fish.ListDevices()
+	if err != nil {
+		return err
+	}
+	if len(devices) == 0 {
+		return errors.Errorf("fish list devices no device found")
+	}
+	device := devices[0]
+
 	fsmap, err := fish.ListFilesystems()
 	if err != nil {
 		return err
 	}
 	d.fsmap = fsmap
 
-	devs := d.fsmap.Keys()
-	for i := 0; i < len(devs); i++ {
-		//dev := devs[i]
-		//ifs, _ := d.fsmap.Get(devs[i])
-		//fs := ifs.(string)
+	lvs, err := fish.Lvs()
+	if err != nil {
+		return err
+	}
+	d.lvmParts = lvs
 
+	keys := d.fsmap.Keys()
+	for i := 0; i < len(keys); i++ {
+		partDev := keys[i]
+		ifs, _ := d.fsmap.Get(keys[i])
+		fs := ifs.(string)
+		part := guestfishpart.NewGuestfishDiskPartition(device, partDev, fs, fish)
+		d.parts = append(d.parts, part)
 	}
 
 	return nil
@@ -94,15 +115,18 @@ func (d *SLibguestfsDriver) Disconnect() error {
 }
 
 func (d *SLibguestfsDriver) GetPartitions() []fsdriver.IDiskPartition {
-	return nil
+	return d.parts
 }
 
 func (d *SLibguestfsDriver) IsLVMPartition() bool {
-	return false
+	return len(d.lvmParts) > 0
 }
 
 func (d *SLibguestfsDriver) Zerofree() {
-
+	startTime := time.Now()
+	for _, part := range d.parts {
+		part.Zerofree()
+	}
 }
 
 func (d *SLibguestfsDriver) ResizePartition() error {

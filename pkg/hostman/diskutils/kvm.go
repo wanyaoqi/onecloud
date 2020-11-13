@@ -24,17 +24,7 @@ import (
 	"yunion.io/x/onecloud/pkg/hostman/hostdeployer/consts"
 )
 
-//const MAX_TRIES = 3
-
 type SKVMGuestDisk struct {
-	//imagePath string
-	//nbdDev      string
-	//partitions []*guestfs.SKVMGuestDiskPartition
-	//lvms        []*nbd.SKVMGuestLVMPartition
-	//acquiredLvm bool
-
-	//imageRootBackFilePath string
-
 	deployer IDeployer
 }
 

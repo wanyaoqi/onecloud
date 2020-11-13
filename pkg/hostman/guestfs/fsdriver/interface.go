@@ -54,6 +54,7 @@ type IDiskPartition interface {
 	GetMountPath() string
 	IsReadonly() bool
 	GetPhysicalPartitionType() string
+	Zerofree()
 }
 
 type IRootFsDriver interface {

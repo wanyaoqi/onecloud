@@ -119,8 +119,12 @@ func (fish *Guestfish) Quit() error {
 	return err
 }
 
-func (fish *Guestfish) AddDrive(path, label string) error {
-	_, err := fish.execute(fmt.Sprintf("add-drive %s label:%s\n", path, label))
+func (fish *Guestfish) AddDrive(path, label string, readonly bool) error {
+	cmd := fmt.Sprintf("add-drive %s label:%s\n", path, label)
+	if readonly {
+		cmd += " readonly:true"
+	}
+	_, err := fish.execute(cmd)
 	if err != nil {
 		return err
 	}
@@ -174,8 +178,12 @@ func (fish *Guestfish) Mount(partition string) error {
 	return err
 }
 
-func (fish *Guestfish) MountLocal(localmountpoint string) error {
-	_, err := fish.execute(fmt.Sprintf("mount-local %s\n", localmountpoint))
+func (fish *Guestfish) MountLocal(localmountpoint string, readonly bool) error {
+	cmd := fmt.Sprintf("mount-local %s\n", localmountpoint)
+	if readonly {
+		cmd += " readonly:true"
+	}
+	_, err := fish.execute(cmd)
 	return err
 }
 
@@ -202,6 +210,32 @@ func (fish *Guestfish) LvmClearFilter() error {
 	return err
 }
 
+func (fish *Guestfish) Lvs() ([]string, error) {
+	return fish.execute("lvs")
+}
+
 func (fish *Guestfish) SfdiskL(dev string) ([]string, error) {
 	return fish.execute(fmt.Sprintf("sfdisk-l %s", dev))
+}
+
+func (fish *Guestfish) Fsck(dev, fs string) error {
+	out, err := fish.execute(fmt.Sprintf("fsck %s %s", fs, dev))
+	log.Infof("FSCK: %v", out)
+	return err
+}
+
+func (fish *Guestfish) Ntfsfix(dev string) error {
+	out, err := fish.execute(fmt.Sprintf("ntfsfix %s", dev))
+	log.Infof("NTFSFIX: %v", out)
+	return err
+}
+
+func (fish *Guestfish) Zerofree(dev string) error {
+	_, err := fish.execute(fmt.Sprintf("zerofree %s", dev))
+	return err
+}
+
+func (fish *Guestfish) ZeroFreeSpace(dir string) error {
+	_, err := fish.execute(fmt.Sprintf("zero-free-space %s", dir))
+	return err
 }
