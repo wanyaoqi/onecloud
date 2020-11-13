@@ -239,3 +239,19 @@ func (fish *Guestfish) ZeroFreeSpace(dir string) error {
 	_, err := fish.execute(fmt.Sprintf("zero-free-space %s", dir))
 	return err
 }
+
+func (fish *Guestfish) Blkid(partDev string) ([]string, error) {
+	return fish.execute(fmt.Sprintf("blkid %s", partDev))
+}
+
+func (fish *Guestfish) Mkswap(partDev, uuid, label string) error {
+	cmd := fmt.Sprintf("mkswap %s", partDev)
+	if len(uuid) > 0 {
+		cmd += fmt.Sprintf(" uuid:%s", uuid)
+	}
+	if len(label) > 0 {
+		cmd += fmt.Sprintf(" label:%s", label)
+	}
+	_, err := fish.execute(cmd)
+	return err
+}

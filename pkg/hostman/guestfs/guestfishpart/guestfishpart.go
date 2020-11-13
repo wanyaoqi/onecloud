@@ -161,6 +161,27 @@ func (d *SGuestfishDiskPartition) Zerofree() {
 
 func (d *SGuestfishDiskPartition) zerofreeSwap() {
 	// NOT IMPLEMENT
+	res, err := d.fish.Blkid(d.partDev)
+	if err != nil {
+		log.Errorf("failed get blkid %s", err)
+		return
+	}
+	var label, uuid string
+	for i := 0; i < len(res); i++ {
+		if strings.HasPrefix(res[i], "UUID:") {
+			uuid = strings.TrimSpace(strings.Split(res[i], "")[1])
+		} else if strings.HasPrefix(res[i], "LABEL:") {
+			label = strings.TrimSpace(strings.Split(res[i], "")[1])
+		}
+	}
+	if len(uuid) == 0 {
+		log.Warningf("zerofree swap missing uuid")
+		return
+	}
+	err = d.fish.Mkswap(d.partDev, uuid, label)
+	if err != nil {
+		log.Errorf("mkswap failed %s", err)
+	}
 }
 
 func (d *SGuestfishDiskPartition) zerofreeExt() {

@@ -1,9 +1,11 @@
 package libguestfs
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
+	"yunion.io/x/log"
 	"yunion.io/x/pkg/errors"
 	"yunion.io/x/pkg/sortedmap"
 
@@ -11,6 +13,7 @@ import (
 	"yunion.io/x/onecloud/pkg/hostman/diskutils/nbd"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/fsdriver"
 	"yunion.io/x/onecloud/pkg/hostman/guestfs/guestfishpart"
+	"yunion.io/x/onecloud/pkg/util/fileutils2"
 )
 
 const (
@@ -127,6 +130,7 @@ func (d *SLibguestfsDriver) Zerofree() {
 	for _, part := range d.parts {
 		part.Zerofree()
 	}
+	log.Infof("libguestfs zerofree %d partitions takes %f seconds", len(d.parts), time.Now().Sub(startTime).Seconds())
 }
 
 func (d *SLibguestfsDriver) ResizePartition() error {
@@ -137,6 +141,14 @@ func (d *SLibguestfsDriver) FormatPartition(fs, uuid string) error {
 	return nil
 }
 
-func (d *SLibguestfsDriver) MakePartition(fs string) error {
+func (d *SLibguestfsDriver) MakePartition(fsFormat string) error {
+	var (
+		labelType = "gpt"
+		diskType  = fileutils2.FsFormatToDiskType(fsFormat)
+	)
+	if len(diskType) == 0 {
+		return fmt.Errorf("Unknown fsFormat %s", fsFormat)
+	}
+	// TODO
 	return nil
 }
