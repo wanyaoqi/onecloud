@@ -96,7 +96,7 @@ func InitDB(options *common_options.DBOptions) {
 			EtcdEndpoint:              options.EtcdEndpoints,
 			EtcdTimeoutSeconds:        5,
 			EtcdRequestTimeoutSeconds: 2,
-			EtcdLeaseExpireSeconds:    5,
+			EtcdLeaseExpireSeconds:    15,
 			EtcdEnabldSsl:             options.EtcdUseTLS,
 			TLSConfig:                 tlsCfg,
 		}, nil)

@@ -109,7 +109,7 @@ func NewEtcdClient(opt *SEtcdOptions, onKeepaliveFailure func()) (*SEtcdClient, 
 
 	timeoutSeconds = opt.EtcdLeaseExpireSeconds
 	if timeoutSeconds == 0 {
-		timeoutSeconds = 5
+		timeoutSeconds = 15
 	}
 
 	etcdClient.leaseTtlTimeout = timeoutSeconds

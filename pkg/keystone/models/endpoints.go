@@ -241,7 +241,7 @@ func (manager *SEndpointManager) newEtcdInformerBackend(ep *SEndpoint) (informer
 		EtcdEndpoint:              []string{ep.Url},
 		EtcdTimeoutSeconds:        5,
 		EtcdRequestTimeoutSeconds: 10,
-		EtcdLeaseExpireSeconds:    5,
+		EtcdLeaseExpireSeconds:    15,
 	}
 	if useTLS {
 		opt.TLSConfig = tlsCfg
