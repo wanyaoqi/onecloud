@@ -21,6 +21,7 @@ import (
 
 	api "yunion.io/x/onecloud/pkg/apis/compute"
 	"yunion.io/x/onecloud/pkg/compute/models"
+	"yunion.io/x/onecloud/pkg/httperrors"
 	"yunion.io/x/onecloud/pkg/mcclient"
 )
 
@@ -42,4 +43,27 @@ func (self *SLocalStorageDriver) ValidateCreateData(ctx context.Context, userCre
 }
 
 func (self *SLocalStorageDriver) PostCreate(ctx context.Context, userCred mcclient.TokenCredential, storage *models.SStorage, data jsonutils.JSONObject) {
+}
+
+func (self *SLocalStorageDriver) ValidateUpdateData(ctx context.Context, userCred mcclient.TokenCredential, data *jsonutils.JSONDict, storage *models.SStorage) (*jsonutils.JSONDict, error) {
+	var err error
+	data, err = self.SBaseStorageDriver.ValidateUpdateData(ctx, userCred, data, storage)
+	if err != nil {
+		return nil, err
+	}
+	if data.Contains("cmtbound") {
+		cmtbound, err := data.Float("cmtbound")
+		if err != nil {
+			return nil, httperrors.NewInputParameterError("cmtbound")
+		}
+		hosts := storage.GetAttachedHosts()
+		if len(hosts) > 0 {
+			host := hosts[0]
+			hostStorage := host.GetHoststorageOfId(storage.Id)
+			if hostStorage.IsRootPartition && cmtbound > 1.0 {
+				return nil, httperrors.NewBadRequestError("storage mount on root partition can't over commit")
+			}
+		}
+	}
+	return data, nil
 }
